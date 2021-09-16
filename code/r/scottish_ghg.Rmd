@@ -30,18 +30,19 @@ library(here)
 
 
 ```{r read in data}
-scot_ghg <- read_csv(here("data/scottish-ghg-dataset-2018.csv")) %>%
+scot_ghg <- read_csv(here("data/scottish-ghg-dataset-2019.csv")) %>%
   # fix column names
   clean_names() %>%
   # remove empty columns
   select(-starts_with("x")) %>%
+
   # remove the base year line
   filter(emission_year != "BaseYear") %>%
   rename(year = emission_year, 
-         emissions = emissions_mt_co2e) %>%
+         emissions = ghg_emissions_mt_co2e) %>%
   mutate(year = as.numeric(year)) %>%
   # select relevant columns
-  select(sg_source_sector, source_name, year, pollutant, emissions)
+  select(sg_categories, source_name, year, pollutant, emissions)
 ```
 
 
@@ -58,7 +59,7 @@ scot_ghg_clean <- scot_ghg %>%
          source_sub_cat = str_replace_all(source_sub_cat, "[Hh]gv", "HGV"),
          source_sub_cat = str_replace_all(source_sub_cat, "Lg vs", "LGVs"),
         # shorten sector names
-         sg_source_sector = recode(sg_source_sector, 
+         sg_categories = recode(sg_categories, 
                                    "Transport (excluding international aviation and shipping)" = "Domestic\nTransport",
                                    "Agriculture and Related Land Use" = "Agriculture",
                                    "Business and Industrial Process" = "Business\n&\nIndustry")) %>%
@@ -85,7 +86,7 @@ scot_ghg_clean <- scot_ghg %>%
 ghg_tree <- scot_ghg_clean %>%
     filter(year == "2018") %>%
   select(-year) %>%
-  group_by(sg_source_sector, source_name, source_sub_cat) %>%
+  group_by(sg_categories, source_name, source_sub_cat) %>%
   summarise(emissions = sum(emissions)) %>%
   ungroup() %>%
   # remove carbon sinks
@@ -100,25 +101,25 @@ parents_top <- tibble(
 
 
 parents <- ghg_tree %>%
-  group_by(sg_source_sector) %>%
+  group_by(sg_categories) %>%
   summarise(emissions = sum(emissions, na.rm = TRUE)) %>%
   mutate(parents = "<b>Greenhouse Gas\nEmissions</b>",
-         labels = sg_source_sector,
-         ids = paste0("<b>Greenhouse Gas\nEmissions</b> - ", sg_source_sector)) %>%
-  select(-sg_source_sector)
+         labels = sg_categories,
+         ids = paste0("<b>Greenhouse Gas\nEmissions</b> - ", sg_categories)) %>%
+  select(-sg_categories)
 
 second_level <- ghg_tree %>%
-  mutate(ids = paste0("<b>Greenhouse Gas\nEmissions</b> - ", sg_source_sector, " - ", source_name),
+  mutate(ids = paste0("<b>Greenhouse Gas\nEmissions</b> - ", sg_categories, " - ", source_name),
          labels = source_name,
-         parents = paste0("<b>Greenhouse Gas\nEmissions</b>", " - ", sg_source_sector)) %>%
-  select(-sg_source_sector) %>%
+         parents = paste0("<b>Greenhouse Gas\nEmissions</b>", " - ", sg_categories)) %>%
+  select(-sg_categories) %>%
   group_by(ids, parents, labels) %>%
   summarise(emissions = sum(emissions, na.rm = TRUE))
 
 third_level <- ghg_tree %>%
   drop_na(source_sub_cat) %>%
-  mutate(ids = paste0("<b>Greenhouse Gas\nEmissions</b> - ", sg_source_sector, " - ", source_name, " - ", source_sub_cat),
-         parents = paste0("<b>Greenhouse Gas\nEmissions</b> - ", sg_source_sector, " - ", source_name)) %>%
+  mutate(ids = paste0("<b>Greenhouse Gas\nEmissions</b> - ", sg_categories, " - ", source_name, " - ", source_sub_cat),
+         parents = paste0("<b>Greenhouse Gas\nEmissions</b> - ", sg_categories, " - ", source_name)) %>%
   rename(labels = source_sub_cat) %>%
   ungroup() %>%
   select(ids, parents, labels, emissions)
@@ -161,9 +162,9 @@ plot_ly(
 
 # Calculate total greenhouse gas emissions per sector per year
 ghg_sector_total <- scot_ghg_clean %>%
-  group_by(year, sg_source_sector) %>%
+  group_by(year, sg_categories) %>%
   summarise(total_emissions = sum(emissions)) %>%
-  rename(sector = sg_source_sector) %>%
+  rename(sector = sg_categories) %>%
   mutate( sector = recode(sector, 
                                    "Domestic\nTransport" = "Domestic Transport",
                                    "Business\n&\nIndustry" = "Business & Industry")) %>%
