@@ -4,122 +4,132 @@ dbConn <- dbConnect(RSQLite::SQLite(), "data/cycling-snapshots/traffic-counts-db
 dbConn
 
 cycle_counter_locations <- dbGetQuery(dbConn, "SELECT * FROM fixed_counter_locations_metadata")
-head(cycle_counter_locations)
+#head(cycle_counter_locations)
+
+
 reporting_sites <- dbGetQuery(dbConn, "SELECT * FROM fixed_counter_locations")
 
 reporting_sites <- reporting_sites %>%
-  rename(siteID = id) %>%
-  select(-c(batteryLevel, lastConnected, type, offlineAfterMinutes)) %>%
+    rename(siteID = id) %>%
+    select(-c(batteryLevel, lastConnected, type, offlineAfterMinutes)) %>%
 
-  full_join(cycle_counter_locations %>%
-              mutate_at(vars(SiteId), as.character) %>%
-              rename(AltRoadName = RoadName) %>%
-              select(-c(Location, Latitude, Longitude, X, Y)),
+    full_join(cycle_counter_locations %>%
+        mutate_at(vars(SiteId), as.character) %>%
+        rename(AltRoadName = RoadName) %>%
+        select(-c(Location, Latitude, Longitude, X, Y)),
 
-    by = c("externalId" = "SiteId")
-  )
+        by = c("externalId" = "SiteId")
+    )
 
 reporting_sites <- reporting_sites %>%
-  mutate_at(vars(siteID, status, site, externalId, Location, RoadType), as.factor) %>%
+    filter(!is.na(siteID)) %>%
+    #mutate_at(vars(siteID, status, site, externalId, LocalAuthority, Location, RoadType), as.factor) %>%
 
-  relocate(LocalAuthority, .before = Location) %>%
-  relocate(RoadType, .after = RoadName) %>%
-  relocate(RoadNumber, .after = RoadName) %>%
-  relocate(AltRoadName, .after = RoadName) %>%
-  mutate_at(vars(CycleCounter, PedestrianCounter), ~ parse_date(., "%b-%y"))
+    relocate(LocalAuthority, .before = Location) %>%
+    relocate(RoadType, .after = RoadName) %>%
+    relocate(RoadNumber, .after = RoadName) %>%
+    relocate(AltRoadName, .after = RoadName) %>%
+    mutate_at(vars(CycleCounter, PedestrianCounter), ~ parse_date(., "%b-%y"))
 
-str(reporting_sites)
-head(reporting_sites)
+#str(reporting_sites)
+#head(reporting_sites)
 
+non_nmf_counter_metadata <- dbGetQuery(dbConn, "SELECT * FROM non_nmf_counter_locations_metadata")
 
-cycle_counter_data_2017_2021 <- dbGetQuery(dbConn, "SELECT * FROM counter_data_hourly")
+non_nmf_counter_metadata <- non_nmf_counter_metadata %>%
+    mutate_at(vars(start_date, end_date, ends_with("Counter")), as_date) %>%
+    mutate_at(vars(Provider, siteID, site, LocalAuthority, Location, RoadName, RoadType), as.factor)
 
-dim(cycle_counter_data_2017_2021)
-head(cycle_counter_data_2017_2021)
+reporting_sites <- reporting_sites %>%
+    mutate(Provider = default_provider) %>%
 
-cycle_counter_data_2017_2021 <- cycle_counter_data_2017_2021 %>%
-  parseCounterDataFromDB(TRUE)
-
-cycle_counter_data_2017_2021 <- cycle_counter_data_2017_2021 %>%
-
-  left_join(cycle_counter_data_2017_2021 %>%
-    group_by(site, Location, traffic_mode) %>%
-    summarise(total_by_site = sum(count, na.rm = TRUE))
-  ) %>%
-
-  left_join(cycle_counter_data_2017_2021 %>%
-    group_by(site, Location, year, traffic_mode) %>%
-    summarise(total_by_site_and_year = sum(count, na.rm = TRUE))
-  ) %>%
-
-  left_join(cycle_counter_data_2017_2021 %>%
-    group_by(siteID, year, traffic_mode) %>% #, Location, RoadName) %>%
-    summarise(total_by_counter_and_year = sum(count, na.rm = TRUE))
-  )
+    bind_rows(non_nmf_counter_metadata %>%
+                select(- c(start_date, end_date, average, count, Notes)) %>%
+                rename(externalId = siteID)
+              ) %>%
+    mutate_if(is.factor, as.character) %>%
+    mutate_at(vars(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor)
 
 
-start_date <- min(cycle_counter_data_2017_2021$date)
-end_date <- max(cycle_counter_data_2017_2021$date)
 
+cycle_counter_data_from_2017 <- dbGetQuery(dbConn, "SELECT * FROM counter_data_hourly")
 
-padding_cycle_counter_data_2017_2021 <-
-  as.data.frame(levels(cycle_counter_data_2017_2021$year)) %>%
-  full_join(as.data.frame(levels(cycle_counter_data_2017_2021$month)),
-              by = character()) %>%
-  full_join(as.data.frame(levels(as.ordered(cycle_counter_data_2017_2021$time))),
-              by = character()) %>%
-  rename_with(~ c("year", "month", "time")) %>%
+#dim(cycle_counter_data_from_2017)
+#head(cycle_counter_data_from_2017)
 
-  mutate(monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) #%>%
-  #filter(between(monthOfYear, start_date, end_date))
+cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
+    parseCounterDataFromDB()
+record_total <- nrow(cycle_counter_data_from_2017)
 
+# filter out anything beyond previous month - current month's totals sometimes change, depending on reporting lag
+# and also from counter installation to period when counts went over 0
+max_reporting_date <- as_date(now())
+day(max_reporting_date) <- 1
 
-count_by_location <- padding_cycle_counter_data_2017_2021 %>%
-    distinct(year, month) %>%
+# will be overwritten after with unfiltered records
+counter_reporting_metadata <- cycle_counter_data_from_2017 %>%
 
-    full_join(reporting_sites %>%
-                  distinct(LocalAuthority, Location, CycleCounter),
-              by = character()
-             ) %>%
+    group_by(Provider, traffic_mode, siteID, site, Location, RoadName, date) %>%
+    summarise(date = min(date)) %>%
+    rename(record_start_date = date) %>%
 
-    full_join(cycle_counter_data_2017_2021 %>%
+    arrange(record_start_date) %>%
+    slice_head(n = 1) %>%
+    ungroup() %>%
 
-                filter(traffic_mode == "bicycle") %>%
-                group_by(Location, year, month) %>%
-                summarise(average = mean(count),
+    left_join(cycle_counter_data_from_2017 %>%
+                group_by(Provider, traffic_mode, siteID, year, month, date) %>%
+                summarise(start_date = min(date),
+                          end_date = max(date),
+                          no_of_counters = n_distinct(siteID),
+                          median = median(count, na.rm = TRUE),
+                          average = mean(count, na.rm = TRUE),
                           count = sum(count)) %>%
 
-                ungroup() %>%
-                #arrange(year, month) %>%
+                slice(which(count > 0)) %>%
 
-                mutate(lag = lag(count),
-                       GrowthRate = (count - lag(count)) / lag(count)) %>%
-                relocate(GrowthRate, .after = count) %>%
-                relocate(lag, .after = count)) %>% # end join
+                group_by(Provider, traffic_mode, siteID) %>%
+                summarise(start_date = min(start_date),
+                          end_date = max(end_date),
+                          average = mean(average, na.rm = TRUE),
+                          count = sum(count)) %>%
+                ungroup()
+    )
 
-                drop_na(Location) %>%
+
+cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
+
+    left_join(counter_reporting_metadata %>%
+                  select(Provider, traffic_mode, siteID, start_date)) %>%
+
+    filter((date >= start_date) & #between(date, start_date, max_reporting_date)) %>% - between throwing an error ...
+           (date < max_reporting_date)) %>%
+    select(-start_date)
+
+rm(max_reporting_date)
+filtered_record_total <- nrow(cycle_counter_data_from_2017)
 
 
-                mutate(monthOfYear = paste0(month, "-", year)) %>%
-                mutate_at(vars(monthOfYear), ~ parse_date(., format = "%b-%Y")) %>%
+cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
 
-                relocate(monthOfYear, .after = month) %>%
-    
-                mutate_at(vars(LocalAuthority), ~replace(., is.na(.), "Not Known")) %>%
-                mutate_at(vars(LocalAuthority, Location), as.factor) %>%
-                mutate_at(vars(LocalAuthority), ~ fct_relevel(., "Not Known", after = Inf)) %>%
+    left_join(cycle_counter_data_from_2017 %>%
+        group_by(site, Location, traffic_mode) %>%
+        summarise(total_by_site = sum(count, na.rm = TRUE))
+    ) %>%
 
-                mutate_at(vars(year), as.ordered) %>%
-                mutate(month = factor(month, levels = month.abb)) %>%
-                mutate(pseudo_point = if_else(is.na(average), 0, 1), # need this and next to generate full trace sets and legend or animation breaks
-                       tooltip = if_else((pseudo_point == 0),
-                                         "",
-                                         paste("Average count by", monthOfYear, "-", round(average, 2),
-                                               "\nTotal count by", monthOfYear, "-", count
-                                              )),
-                       average = replace_na(average, -Inf),
-                       count = replace_na(count, -Inf))
+    left_join(cycle_counter_data_from_2017 %>%
+        group_by(site, Location, year, traffic_mode) %>%
+        summarise(total_by_site_and_year = sum(count, na.rm = TRUE))
+    ) %>%
 
+    left_join(cycle_counter_data_from_2017 %>%
+        group_by(siteID, year, traffic_mode) %>% #, Location, RoadName) %>%
+        summarise(total_by_counter_and_year = sum(count, na.rm = TRUE))
+    )
 
 
 dbDisconnect(dbConn)
+
+
+
+

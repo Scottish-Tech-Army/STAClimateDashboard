@@ -10,8 +10,11 @@ weekdaysAbbrevRegex
 monthsAbbrevRegex <- paste0(month.abb, collapse = "|")
 monthsAbbrevRegex
 
-genderRegex <- if_else(exists("gender_options_formatted"), paste0(gender_options_formatted, collapse = "|"), "")
-
+# will still fail if first part false... - calls both parts and returns one :@
+#genderRegex <- if_else(exists("gender_options_formatted"), paste0(gender_options_formatted, collapse = "|"), "")
+genderRegex <- ""
+if (exists("gender_options_formatted"))
+genderRegex <- paste0(gender_options_formatted, collapse = "|")
 
 tickFont <- list(family = "Arial, sans-serif", size = 12)
 
@@ -28,9 +31,11 @@ renameTraces <-
             current_trace <- plot_tmp$x$data[[i]]$name
 
             #print(i)
-            #print(current_trace)
-            if (!is.null(current_trace))
+            #print(str_extract(current_trace, regex(regexpr)))
+            if (!is.null(current_trace)) {
+                current_trace <- str_remove_all(current_trace, "[()]")
                 plot_tmp$x$data[[i]]$name <- str_extract(current_trace, regex(regexpr))
+            }
 
         }
 
@@ -93,3 +98,29 @@ convertToPlotly <-
         return(plot_tmp)
     }
 
+
+create_plotly_control_buttons <- function(arg_label, values) {
+    
+    lapply(
+        values,
+        
+        FUN = function(value, arg_label) {
+
+          button <- list(
+            method = "restyle",
+            args = list(arg_label, value),
+            label = sprintf("%s", value)
+          )
+        },
+        arg_label
+    )
+}
+
+create_plotly_geom_vline <- function(x = 0, colour = "red", width = 1, linetype = "dashdot") {
+    list(type = "line",
+         y0 = 0, y1 = 1,
+         yref = "paper",
+         x0 = x, x1 = x,
+         line = list(color = colour, width = width, dash = linetype)
+    )
+}

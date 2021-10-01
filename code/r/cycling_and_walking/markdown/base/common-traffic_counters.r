@@ -4,6 +4,8 @@ source("base/common.r")
 
 #options(lubridate.week.start = 1) # need to group week-ends - not set, though...
 
+default_provider <- "National Monitoring Framework (CS)"
+
 
 
 cop_cycling_theme <- 
@@ -24,7 +26,9 @@ parseCounterDataFromDB <-
     function(counterData, glimpseContent = FALSE) {
                 
         counterData <- counterData %>%
-            mutate_at(c("siteID", "site", "Location", "countInterval", "traffic_mode"), as.factor) %>%
+            mutate_at(c("siteID", "site", "Location", "countInterval", "traffic_mode", "Provider"), as.factor) %>%
+            relocate(Latitude, .before = Longitude) %>%  # correction to order, will have no impact if not needed 
+            relocate(Provider, .before = siteID) %>%
             mutate_at(c("fromDate", "toDate"), as_datetime) %>%
             
             mutate(date = as_date(map_chr(str_split(localTimestamp, "T"), 1))) %>%
@@ -46,7 +50,7 @@ parseCounterDataFromDB <-
 
 
 loadAndParseCounterData <-
-    function(pathToFile, glimpseContent = FALSE) {
+    function(pathToFile, provider = NULL, glimpseContent = FALSE) {
         
         print(paste0("Parsing file '", pathToFile, "' ..."))
         
@@ -54,7 +58,10 @@ loadAndParseCounterData <-
         data_loaded <- read_csv(pathToFile, trim_ws = T) %>% 
                             filter(rowSums(is.na(.)) != ncol(.))
         
-   
+        if (is_null(provider))
+            provider <- default_provider
+
+
         data_loaded <- bind_cols(
 
             getMetadata(pathToFile),
@@ -68,14 +75,15 @@ loadAndParseCounterData <-
                 mutate(date = parse_date(date, "%d-%b-%Y")) %>%
                 mutate(weekday = wday(date, label = TRUE),
                        month = month(date, label = TRUE),
-                       year = year(date)) %>%
+                       year = year(date), 
+                       Provider = provider) %>%
 
                 mutate_at(vars("count"), as.integer) %>%
                 mutate_at(vars("weekday", "month", "year"), as.factor) %>%
                 mutate(isWeekEnd = (as.integer(weekday) %in% c(1, 7))) %>% #between(as.integer(weekday), 6, 7)) %>%
                 relocate(isWeekEnd, .after = "weekday") %>%
 
-                select(-count, everything(), count)
+                select(-c(count, Provider), everything(), count, Provider)
             )
 
         
@@ -117,17 +125,21 @@ getMetadata <-
 
 
 # data and file structure differences in output to JSON from API
-
 loadAndParseJsonCounterData <-
-    function(pathTofile, localAuthorityData, breakDownDates = FALSE, glimpseContent = FALSE) {
+    function(pathTofile, localAuthorityData, breakDownDates = FALSE, provider = NULL, glimpseContent = FALSE) {
         
         print(paste0("Parsing file '", pathTofile, "' ..."))
 
         counter_data <- fromJSON(pathTofile) 
         counter_data <- counter_data$crossingCountPerTimeInterval 
         
+        
+        if (is_null(provider))
+            provider <- default_provider
+
         counter_data <- counter_data %>%
-            mutate(date = as_date(map_chr(str_split(localTimestamp, "T"), 1)))
+            mutate(date = as_date(map_chr(str_split(localTimestamp, "T"), 1)), 
+                   Provider = provider)
         
         if (breakDownDates) {
             counter_data <- counter_data %>%
@@ -157,7 +169,8 @@ loadAndParseJsonCounterData <-
             # run filter, then remove interim columns
             filter(((traffic_mode == "bicycle") & (date >= CycleCounter)) | 
                    ((traffic_mode == "pedestrian") & (date >= PedestrianCounter))) %>%        
-            select(-c(LocalAuthority, RoadNumber, RoadType, CycleCounter, PedestrianCounter))
+            select(-c(LocalAuthority, RoadNumber, RoadType, CycleCounter, PedestrianCounter)) %>%
+            select(-Provider, everything(), Provider)
 
 
         if (!breakDownDates) {
