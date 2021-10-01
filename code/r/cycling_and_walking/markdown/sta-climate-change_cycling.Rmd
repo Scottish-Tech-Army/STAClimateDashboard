@@ -14,6 +14,12 @@ output:
     
 ---
 
+<style>
+  table {
+    border-bottom: 1px solid #333;
+  }
+</style>
+
 ```{r global-options, include = FALSE, cache = FALSE}
 
 knitr::opts_chunk$set(out.width = '100%', out.height = '100%', fig.align = 'left',
@@ -50,17 +56,10 @@ knitr::read_chunk("base/cycle_counters_interactive.r")
 ```{r sqa_data_extraction, cache = TRUE}
 
 #source("base/sta_climate_change_sql_extract.r", local = knitr::knit_global())
-load("cycling_datasets.Rdata")  #interim
+load("cycling_datasets.Rdata")  #interim - querying and parsing from scratch
+source("base/sta_climate_change_data_parsing.r", local = knitr::knit_global())
 
 ```
-
-
-Sidebar {.sidebar}
-=======================================================================
-
-### Cycle Counts - tracked across 63 counters in Scotland Jun 2017 to Jun 2021
-
-![](wip.png "Icon obtained from Icon Fonts - http://www.onlinewebfonts.com/icon, CC BY 3.0 license"){width=50%}
 
 
 Overview
@@ -69,35 +68,56 @@ Overview
 Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
-> Starting with the installation of 11 bicycle (and pedestrian) counters in a number of counties predominantly in west, central Scotland, from June 2017 and through to Aug 2020, when the 63rd counter was installed in Fort William in the Highlands, and a further three in Edinburgh in Jun and Jul 2021.
+> Starting with the installation of 11 bicycle (and pedestrian) NMF counters in a number of counties predominantly in west, central Scotland, from June 2017 and through to Aug 2020, when the 63rd counter was installed in Fort William in the Highlands, and a further three in Edinburgh in Jun and Jul 2021.
+The snapshots now also include data from more dense networks of council-managed counters and some points along the John Muir Way.
 
-### Bicycle &amp; Pedestrian Counts {data-height=600}
+### Bicycle &amp; Pedestrian Counters
 
-####
-```{r, bicycle_counts, fig.height = 4, fig.width = 10}
+#### Cyclists &ndash; Total Count by Month &amp; Year, All Counters
+```{r, bicycle_counts, fig.height = 2.5}
 ```
 
-####
-```{r, pedestrian_counts, fig.height = 1.5}
+#### Pedestrians &ndash; Total Count by Month &amp; Year, NMF Counters
+```{r, pedestrian_counts_nmf, fig.height = 1.5}
 ```
 
 
 ### Counter Locations
 
-```{r, counter_installation_data, fig.height = 8, fig.width = 12}
+#### NMF Counter Locations
+```{r, counters_installed_nmf, fig.height = 8, fig.width = 12}
 ```
+
+#### [Council Counter Locations](#council_counter_locations)
+
+```{r, counters_installed_councils, fig.height = 8, fig.width = 12}
+```
+
 
 ### Counter Data Summaries
 
-```{r, summary_tables, results = 'asis'}
+#### NMF Counters
+
+```{r, summary_tables_nmf, results = 'asis'}
 ```
 
 ```{=html}
 <p>&nbsp;<br />
-As at end Jul 2021 nearly <b>4.75m bikes</b> and just over <b>20m pedestrians</b> had been recorded going past all counters.
-Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. Walking, overall, however continued to rise in 2021. But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures.
+Focusing on the NMF counters, at end Aug 2021 nearly <b>5m bikes</b> and just under <b>21m pedestrians</b> had been recorded going past all counters.
+Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. Walking, overall, however continued to rise in 2021. But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then fell again in Aug.
+</p>
+<p>
+The data also includes [council-managed counters](council_counter_locations). Howeveer, the much larger number of counters and denser network in the two largest cities, Edinburgh and Glasgow skew the data, especially when looking at totals. We therefore compare data across location and time using predominantly average counts.
 </p>
 
+<p>&nbsp;<br />
+</p>
+```
+
+
+#### Council Counters &amp; the John Muir Way
+
+```{r, summary_tables_councils, results = 'asis'}
 ```
 
 
@@ -107,8 +127,10 @@ Cycling through the Week {data-navmenu="Exploring the Data"}
 Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
-### Cycling &ndash; Changes through the Week
+```{r, filtered_data_counts_time_of_day_by_year_and_weekday}
+```
 
+### Cycling &ndash; Changes through the Week
 
 ```{r, avg_count_time_of_day_by_weekday_and_year}
 ```
@@ -118,17 +140,21 @@ Row {.tabset .tabset-fade}
 ```{r, avg_count_time_of_day_by_year_and_weekday}
 ```
 
+`r rm(filtered_data) `
+
 
 Cycling through the Year {data-navmenu="Exploring the Data"}
 =======================================================================
 
-> Comparing total count for each location against averages per hour through the day... this gets more interesting looking at the data month on month, as we can see how cycling changes through the full period for which counters were installed and working.
+> Comparing total counts for each data provider and location against averages per hour through the day... this gets more interesting looking at the data month on month, as we can see how cycling changes through the full period for which counters were installed and working.
 
-```{r, counts_time_of_day_by_month_and_year}
-```
+
 
 Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
+
+```{r, filtered_data_counts_time_of_day_by_month_and_year}
+```
 
 ### Average Monthly Count
 
@@ -139,6 +165,8 @@ Row {.tabset .tabset-fade}
 
 ```{r, total_count_time_of_day_by_month_and_year}
 ```
+
+`r rm(filtered_data) `
 
 
 Variation across Locations {data-navmenu="Exploring the Data"}
@@ -175,6 +203,28 @@ Row {.tabset .tabset-fade}
 ```
 
 
+Peak Counts {data-navmenu="Data Stories"}
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+>Counts vary from 0 to, occasionally, for cyclists, well over 20K within an hour and almost 70K in a single day. The tables below give a feel for when spikes occurred within each dataset; in East Dunbartonshire the peak hourly count occurs on the day with the peak count. Any or all of day of the week, time of day and month in the year, and recent weather patterns, road type, in addition to a specific event in a location contribute to variation in numbers of especially cyclists in a location.
+
+
+### Peak Counts
+
+```{r, summary_tables_max_counts_hourly, results = 'asis'}
+```
+```html
+  <p>&nbsp;<br /></p>
+  
+```
+
+```{r, summary_tables_max_counts_daily, results = 'asis'}
+```
+
+
 Lerwick &ndash; Change through the Seasons {data-navmenu="Data Stories"}
 =======================================================================
 
@@ -183,7 +233,7 @@ Row {.tabset .tabset-fade}
 
 ### Lerwick &ndash; Change through the Seasons
 
-```{r
+```{r}
 ```
 
 
@@ -210,7 +260,7 @@ Row
 <p>&nbsp;<br />
 <!-- A summary sheet may be downloaded &ndash; <a href="cycle_counters_info_cards.pdf">cycle_counters_info_cards.pdf</a -->
 
-Counter data may be accessed via Cycling Scotland's <a href = "https://usmart.io/org/cyclingscotland" target = "_blank">Active Travel Open Data Portal</a>.
+Counter data may be accessed via Cycling Scotland's <a href = "https://usmart.io/org/cyclingscotland/" target = "_blank">Active Travel Open Data Portal</a>.
 
 The data used in the analysis presented was accessed via the API at the level of detail for both pedestrian and cycle counters operated under Cycling Scotland's National Monitoring Framework. To use the API you must register and request an API key. Alternatively, a <a href= "https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/7ffbe5d6-fa13-4352-829d-0bb0a58e3355" target = "_blank">dump may be downloaded</a> from the portal.
 
