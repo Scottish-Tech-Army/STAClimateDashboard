@@ -84,13 +84,7 @@ The snapshots now also include data from more dense networks of council-managed 
 
 ### Counter Locations
 
-#### NMF Counter Locations
-```{r, counters_installed_nmf, fig.height = 8, fig.width = 12}
-```
-
-#### [Council Counter Locations](#council_counter_locations)
-
-```{r, counters_installed_councils, fig.height = 8, fig.width = 12}
+```{r, counters_installed, fig.height = 8, fig.width = 12}
 ```
 
 
@@ -146,7 +140,7 @@ Row {.tabset .tabset-fade}
 Cycling through the Year {data-navmenu="Exploring the Data"}
 =======================================================================
 
-> Comparing total counts for each data provider and location against averages per hour through the day... this gets more interesting looking at the data month on month, as we can see how cycling changes through the full period for which counters were installed and working.
+> Comparing total counts for each data provider and location against averages per hour through the day... this gets more interesting looking at the data month on month, as we can see how cycling changes through the full period for which counters were installed and working. (Note - where the picture is blank no data exists for a provider for that period.)
 
 
 
@@ -216,7 +210,8 @@ Row {.tabset .tabset-fade}
 
 ```{r, summary_tables_max_counts_hourly, results = 'asis'}
 ```
-```html
+
+```{=html}
   <p>&nbsp;<br /></p>
   
 ```
