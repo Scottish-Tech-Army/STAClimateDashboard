@@ -22,7 +22,7 @@ padding_cycle_counter_data_from_2017 <-
 
 counter_data <- reporting_sites %>%
 
-    distinct(siteID, site, LocalAuthority, Location, RoadName, CycleCounter) %>%
+    distinct(Provider, siteID, site, LocalAuthority, Location, RoadName, CycleCounter) %>%
     filter(!is.na(CycleCounter)) %>% # & !is.na(Location)) %>%
     left_join(cycle_counter_data_from_2017 %>%
                      distinct(siteID, site, Location, RoadName, traffic_mode, total_by_site) %>%
@@ -33,7 +33,7 @@ counter_data <- reporting_sites %>%
     mutate(LocationLabel = paste0(Location, " (", replace_na(LocalAuthority, ""), ")"))%>%
     mutate_at(vars(LocalAuthority, Location, LocationLabel), as.factor) %>%
 
-    group_by(LocalAuthority, Location, LocationLabel, CycleCounter, total_by_site) %>%
+    group_by(Provider, LocalAuthority, Location, LocationLabel, CycleCounter, total_by_site) %>%
     tally() %>%
     rename(bicycle_counters = n) %>%
     arrange(CycleCounter)
@@ -41,12 +41,12 @@ counter_data <- reporting_sites %>%
 
 counter_data <- counter_data %>%
 
-    group_by(LocalAuthority, Location, LocationLabel, CycleCounter) %>%
+    group_by(Provider, LocalAuthority, Location, LocationLabel, CycleCounter) %>%
     summarise(bicycle_counters = sum(bicycle_counters)) %>%
 
     full_join(counter_data %>%
 
-                group_by(LocalAuthority, Location) %>%
+                group_by(Provider, LocalAuthority, Location) %>%
                 summarise(LatestInstallation = max(CycleCounter))
               ) %>%
 

@@ -997,29 +997,29 @@ rm(filtered_data)
 
 
 
-## ---- counters_installed_nmf --------
+## ---- counters_installed --------
 
 #options(repr.plot.width = 6.8, #8, # 9.4, 
 #        repr.plot.height = 12) # 9.6) # change for printing equal plot size alongside each other    
 
 plot1 <- counter_data %>%
 
-
     group_by(LocalAuthority, Location) %>%
     summarise(bicycle_counters = sum(bicycle_counters), 
               LatestInstallation = max(LatestInstallation)) %>%
 
-    ggplot(aes(y = fct_reorder(Location, LatestInstallation), x = bicycle_counters, 
+    ggplot(aes(y = fct_reorder2(Location, desc(bicycle_counters), desc(LatestInstallation)), x = bicycle_counters, 
                #frame = CycleCounter, ids = Location, 
                text = paste0(Location, " (", LocalAuthority, ") - ", bicycle_counters) #, " installed ", CycleCounter)
               )) +
         geom_segment(aes(xend = 0, yend = Location), alpha = 0.45) +
         geom_point(aes(colour = LocalAuthority, alpha = 0.45), size = 2) + 
+        scale_x_log10() + 
         ylab("") + # Location") +
         xlab("No. of Bicycle Counters Installed\n") + # pad bottom to align x-axes
         #ggtitle("No. of Bicycle Counters Installed") + 
         cop_cycling_theme + 
-        theme(axis.text.y = element_text(size = 10),
+        theme(axis.text.y = element_text(size = 9),
               legend.position = "none") +
         scale_fill_hue(c = 20)
 
@@ -1033,21 +1033,25 @@ datebreaks <- seq(min(counter_data$CycleCounter), max(counter_data$CycleCounter)
 
 plot2 <- counter_data %>%
 
+    group_by(LocalAuthority, Location) %>%
+    mutate(bicycle_counters = sum(bicycle_counters), 
+              LatestInstallation = max(LatestInstallation)) %>%
 
-    ggplot(aes(y = fct_reorder(Location, LatestInstallation), x = CycleCounter, 
+    ggplot(aes(y = fct_reorder2(Location, desc(bicycle_counters), desc(LatestInstallation)), x = CycleCounter, 
                frame = CycleCounter, ids = Location, 
                text = paste0(Location, " (", LocalAuthority, ") - ", bicycle_counters, " installed ", CycleCounter)
               )) +
         geom_segment(aes(xend = min(CycleCounter), yend = Location), alpha = 0.45) +
-        geom_point(aes(colour = LocalAuthority), size = 2, alpha = 0.45, show.legend = FALSE) + 
+        geom_point(aes(colour = LocalAuthority, shape = Provider), size = 2, alpha = 0.45, show.legend = FALSE) + 
         ylab("") + # Location") +
+        guides(colour = "none") + 
         scale_x_date("Counter Installation Date",
                      breaks = datebreaks, labels = scales::date_format("%b-%Y")) +
         cop_cycling_theme + 
         
-scale_fill_hue(c = 20) +
-        theme(axis.text.y = element_text(size = 10),
-              axis.text.x = element_text(size = 11, angle = 45, vjust = 0.8, hjust = 0.8), 
+        scale_fill_hue(c = 20) +
+        theme(axis.text.y = element_text(size = 9),
+              axis.text.x = element_text(size = 10, angle = 45, vjust = 0.8, hjust = 0.8), 
               legend.position = "none")
 
 
@@ -1057,7 +1061,7 @@ gridExtra::grid.arrange(plot2, plot1, ncol = 2)
 
 
 
-## ---- counters_installed_councils --------
+## ----  --------
 
 
 
