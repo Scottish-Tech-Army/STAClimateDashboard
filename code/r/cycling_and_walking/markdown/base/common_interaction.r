@@ -1,5 +1,6 @@
 library(lubridate)
 
+library(khroma)
 library(plotly)
 library(crosstalk)
 
@@ -15,6 +16,21 @@ monthsAbbrevRegex
 genderRegex <- ""
 if (exists("gender_options_formatted"))
 genderRegex <- paste0(gender_options_formatted, collapse = "|")
+
+# initially restricted to it-402dc, but now shared across all,along with other potentially reusable vars
+# colour-blind safe - see https://cran.r-project.org/web/packages/khroma/vignettes/tol.html
+gender_colour_scheme <- c("female" = as.character(colour("bright")(7)["purple"]),
+                          "male" = as.character(colour("bright")(7)["green"]))
+gender_shape_icons <- c("female" = -0x2640L, "male" = -0x2642L) # \u2640 and \u2642 )
+
+weather_metrics <- c("min_temp", "mean_temp", "max_temp", "rainfall")
+weather_metrics_colour_scheme <- c("min_temp" = as.character(colour("high contrast")(3)["blue"]),
+                                   "mean_temp" = as.character(colour("high contrast")(3)["yellow"]),
+                                   "max_temp" = as.character(colour("high contrast")(3)["red"]),
+                                   "rainfall" = as.character(colour("vibrant")(7)["teal"])
+                                  )
+
+
 
 tickFont <- list(family = "Arial, sans-serif", size = 12)
 

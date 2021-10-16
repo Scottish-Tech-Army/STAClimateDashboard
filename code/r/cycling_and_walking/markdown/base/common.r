@@ -25,9 +25,24 @@ formatNumber <-
             value <- str_remove(value, "\\.[0]+")
         
 
-        all(value)
+        return(value)
     }
 formatNumber <- Vectorize(formatNumber)
+
+
+# shared legends
+# adapted from https://stackoverflow.com/a/13650878
+# points to more complex https://github.com/hadley/ggplot2/wiki/Share-a-legend-between-two-ggplot2-graphs
+
+create_shared_legend <-
+    function(selected_plot){
+    
+        pseudo_plot <- ggplot_gtable(ggplot_build(selected_plot))
+        legend <- which(sapply(pseudo_plot$grobs, function(x) x$name) == "guide-box")
+        
+        return(pseudo_plot$grobs[[legend]])
+    }
+                            
 
 
 # updated with newer function calls

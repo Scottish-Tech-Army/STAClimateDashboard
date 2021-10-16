@@ -55,6 +55,7 @@ counter_data <- counter_data %>%
 
 
 ## ---- count_by_location --------
+
 count_by_location <- padding_cycle_counter_data_from_2017 %>%
     distinct(year, month) %>%
 
@@ -66,9 +67,12 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
     full_join(cycle_counter_data_from_2017 %>%
 
                 filter(traffic_mode == "bicycle") %>%
+                group_by(Location, year, month, date) %>%
+                summarise(count = sum(count)) %>%
                 group_by(Location, year, month) %>%
-                summarise(average = mean(count),
+                summarise(daily_average = mean(count),
                           count = sum(count)) %>%
+
 
                 ungroup() %>%
                 #arrange(year, month) %>%
@@ -78,6 +82,7 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
                 relocate(GrowthRate, .after = count) %>%
                 relocate(lag, .after = count)) %>% # end join
 
+                mutate_if(is.factor, as.character) %>%
                 drop_na(Location) %>%
 
 
@@ -92,15 +97,14 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
 
                 mutate_at(vars(year), as.ordered) %>%
                 mutate(month = factor(month, levels = month.abb)) %>%
-                mutate(pseudo_point = if_else(is.na(average), 0, 1), # need this and next to generate full trace sets and legend or animation breaks
+                mutate(pseudo_point = if_else(is.na(daily_average), 0, 1), # need this and next to generate full trace sets and legend or animation breaks
                        tooltip = if_else((pseudo_point == 0),
                                          "",
-                                         paste("Average count by", monthOfYear, "-", round(average, 2),
-                                               "\nTotal count by", monthOfYear, "-", count
-                                              )),
-                       average = replace_na(average, -Inf),
+                                         paste(Location, "-", month, year,
+                                               "\nAverage daily count:", round(daily_average, 2),
+                                               "\nTotal count:", formatNumber(count))),
+                       daily_average = replace_na(daily_average, -Inf),
                        count = replace_na(count, -Inf))
-
 
 
 ## ---- counts_time_of_day_by_month_and_year --------
@@ -125,7 +129,101 @@ counts_by_month <- padding_cycle_counter_data_from_2017 %>%
 
 
 
-## ----  --------
+## ---- historical_weather_scotland_from_2017 --------
+
+historical_weather_scotland_from_2017 <- parseMeteoData("data/historical_meteo_data/scotland_mean_temp.tsv", "mean_temp",  start_date, end_date) %>%
+
+    full_join(parseMeteoData("data/historical_meteo_data/scotland_max_temp.tsv", "max_temp",start_date, end_date)
+             ) %>%
+
+    full_join(parseMeteoData("data/historical_meteo_data/scotland_min_temp.tsv", "min_temp", start_date, end_date)
+             ) %>%
+
+    full_join(parseMeteoData("data/historical_meteo_data/scotland_rainfall.tsv", "rainfall", start_date, end_date)
+             ) %>%
+
+    mutate_at(vars(year), as.ordered)
+
+datebreaks <- seq(min(historical_weather_scotland_from_2017$monthOfYear),
+                  max(historical_weather_scotland_from_2017$monthOfYear), by = "2 months")
+
+
+
+## ---- historical_weather_lerwick_from_2017 --------
+
+historical_weather_lerwick_from_2017 <- read_table("data/historical_meteo_data/lerwick.tsv") %>%
+                                                    filter(rowSums(is.na(.)) != ncol(.))
+
+historical_weather_lerwick_from_2017 <- historical_weather_lerwick_from_2017 %>%
+
+    rename_with(~ c("year", "month", "max_temp", "min_temp", "af", "rainfall", "sunshine")) %>%
+
+    mutate_if(negate(is.numeric), parse_number) %>%
+
+    filter(year >= year(start_date))%>%
+    mutate_at(vars(year), as.ordered) %>%
+
+    mutate_at(vars(month), ~ month(., label = TRUE)) %>%
+    mutate(monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
+    relocate(monthOfYear, .after = month) %>%
+
+    filter(monthOfYear %within% interval(start_date, end_date))
+
+
+
+## ---- count_by_location_lerwick --------
+
+count_by_location_lerwick <- padding_cycle_counter_data_from_2017 %>%
+    distinct(year, month) %>%
+
+    full_join(reporting_sites %>%
+                  distinct(LocalAuthority, Location, RoadName, CycleCounter) %>%
+                  filter(Location == "Lerwick"),
+              by = character()
+             ) %>%
+
+    full_join(cycle_counter_data_from_2017 %>%
+
+                filter((traffic_mode == "bicycle") & (Location == "Lerwick")) %>%
+                group_by(Location, RoadName, year, month, date) %>%
+                summarise(count = sum(count)) %>%
+                group_by(Location, RoadName, year, month) %>%
+                summarise(daily_average = mean(count),
+                          count = sum(count)) %>%
+
+
+                ungroup() %>%
+
+                mutate(lag = lag(count),
+                       GrowthRate = (count - lag(count)) / lag(count)) %>%
+                relocate(GrowthRate, .after = count) %>%
+                relocate(lag, .after = count)) %>% # end join
+
+                mutate_if(is.factor, as.character) %>%
+                drop_na(Location) %>%
+
+
+                mutate(monthOfYear = paste0(month, "-", year)) %>%
+                mutate_at(vars(monthOfYear), ~ parse_date(., format = "%b-%Y")) %>%
+
+                relocate(monthOfYear, .after = month) %>%
+    
+                mutate_at(vars(LocalAuthority, Location, RoadName), as.factor) %>%
+
+                mutate_at(vars(year), as.ordered) %>%
+                mutate(month = factor(month, levels = month.abb)) %>%
+                mutate(pseudo_point = if_else(is.na(daily_average), 0, 1), # need this and next to generate full trace sets and legend or animation breaks
+                       tooltip = if_else((pseudo_point == 0),
+                                         "",
+                                         paste(RoadName, "-", month, year,
+                                               "\nAverage daily count:", round(daily_average, 2),
+                                               "\nTotal count:", formatNumber(count))),
+                       daily_average = replace_na(daily_average, -Inf),
+                       count = replace_na(count, -Inf)) %>%
+
+    filter(between(monthOfYear, start_date, end_date))
+
+
 
 ## ----  --------
 

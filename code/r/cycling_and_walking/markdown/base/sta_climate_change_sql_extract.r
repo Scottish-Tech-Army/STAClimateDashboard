@@ -48,7 +48,7 @@ reporting_sites <- reporting_sites %>%
                 rename(externalId = siteID)
               ) %>%
     mutate_if(is.factor, as.character) %>%
-    mutate_at(vars(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor)
+    mutate_at(vars(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor) 
 
 
 

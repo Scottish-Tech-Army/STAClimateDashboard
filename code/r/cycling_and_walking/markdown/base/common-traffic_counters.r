@@ -213,41 +213,32 @@ getMetadataFromJson <-
     }     
 
 
-parseMeteoData <- 
+parseMeteoData <-
     function(dataFile, metric, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
     
-        historical_weather <- read_tsv(dataFile, trim_ws = T) %>% 
-                                                            filter(rowSums(is.na(.)) != ncol(.))
+        historical_weather <- read_table(dataFile) %>%
+                                filter(rowSums(is.na(.)) != ncol(.))
 
         historical_weather <- historical_weather %>%
+            mutate_at(vars(year), as.integer) %>%
+            select(c(year, all_of(str_to_lower(month.abb)))) %>%
 
-            separate(as.character(names(historical_weather)), 
-                     str_split(names(historical_weather), "\\s+", simplify = TRUE), 
-                     sep = "\\s+") %>%
-
-            select(year, matches(tolower(month.abb))) %>%
-
-            mutate_at(vars(year), as.integer) %>% #as.ordered) %>%
-            mutate_if(is.character, as.numeric)
-        
-        historical_weather <- historical_weather %>%
+            mutate_at(vars(!matches("year")), as.numeric) %>% # just in case any issues reading in
             rename_if(is.double, str_to_title) %>%
+
             pivot_longer(!year, names_to = "month", values_to = metric) %>%
-            mutate_at(vars(month), as.ordered)
-
-        historical_weather$month <- fct_inorder(historical_weather$month)        
-
+            mutate(month = ordered(month, levels = month.abb))
+ 
         
         historical_weather <- historical_weather %>%
-            mutate(monthOfYear = paste0(month, "-", year)) %>%
-            mutate_at(vars(monthOfYear), ~ parse_date(., format = "%b-%Y")) %>%
-            relocate(monthOfYear, .after = month) 
+            mutate(monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
+            relocate(monthOfYear, .after = month)
         
         # assumes start <= end
         if (!is.null(startDateFilter)) {
             historical_weather <- historical_weather %>%
                 filter(monthOfYear >= startDateFilter)
-        } 
+        }
         if (!is.null(endDateFilter)) {
             historical_weather <- historical_weather %>%
                 filter(monthOfYear <= endDateFilter)
@@ -260,3 +251,4 @@ parseMeteoData <-
         invisible(historical_weather)
 
 }
+
