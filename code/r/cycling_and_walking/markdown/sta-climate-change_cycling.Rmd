@@ -62,31 +62,29 @@ source("base/sta_climate_change_data_parsing.r", local = knitr::knit_global())
 ```
 
 
-Overview
+Overview 
 =======================================================================
+
+Row {data-height=75}
+-------------------------------------
+   
+### Starting with the installation of 11 bicycle and pedestrian counters by Cycling Scotland's National Monitoring Framework (NMF) in a number of counties predominantly in west, central Scotland, from June 2017 and through to Aug 2020, when the 63rd counter was installed in Fort William in the Highlands, and a further three in Edinburgh in Jun and Jul 2021. The snapshots now also include data from more dense networks of council-managed counters and some points along the John Muir Way.
+
+
+Column {data-height=700}
+-----------------------------------------------------------------------
+
+### Cyclists &ndash; Total Count by Month &amp; Year, All Bicycle Counters
+```{r, bicycle_counts}
+```
+
+### Pedestrians &ndash; Total Count by Month &amp; Year, NMF Counters
+```{r, pedestrian_counts_nmf}
+```
+
 
 Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
-
-> Starting with the installation of 11 bicycle (and pedestrian) NMF counters in a number of counties predominantly in west, central Scotland, from June 2017 and through to Aug 2020, when the 63rd counter was installed in Fort William in the Highlands, and a further three in Edinburgh in Jun and Jul 2021.
-The snapshots now also include data from more dense networks of council-managed counters and some points along the John Muir Way.
-
-### Bicycle &amp; Pedestrian Counters
-
-#### Cyclists &ndash; Total Count by Month &amp; Year, All Counters
-```{r, bicycle_counts, fig.height = 2.5}
-```
-
-#### Pedestrians &ndash; Total Count by Month &amp; Year, NMF Counters
-```{r, pedestrian_counts_nmf, fig.height = 1.5}
-```
-
-
-### Counter Locations
-
-```{r, counters_installed, fig.height = 8, fig.width = 12}
-```
-
 
 ### Counter Data Summaries
 
@@ -97,11 +95,11 @@ The snapshots now also include data from more dense networks of council-managed 
 
 ```{=html}
 <p>&nbsp;<br />
-Focusing on the NMF counters, at end Aug 2021 nearly <b>5m bikes</b> and just under <b>21m pedestrians</b> had been recorded going past all counters.
-Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. Walking, overall, however continued to rise in 2021. But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then fell again in Aug.
+Focusing on the NMF counters, at end Sep 2021 over <b>5m bikes</b> and <b>21m pedestrians</b> had been recorded going past all counters.
+Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. Walking, overall, however continued to rise in 2021. But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then fell again in Aug, rising only slightly in Sep.
 </p>
 <p>
-The data also includes [council-managed counters](council_counter_locations). Howeveer, the much larger number of counters and denser network in the two largest cities, Edinburgh and Glasgow skew the data, especially when looking at totals. We therefore compare data across location and time using predominantly average counts.
+The data now also includes council-managed counters. However, the much larger number of counters and denser network in the two largest cities, Edinburgh and Glasgow, skew the data, especially when looking at totals. We therefore compare data across location and time using predominantly average counts.
 </p>
 
 <p>&nbsp;<br />
@@ -112,6 +110,20 @@ The data also includes [council-managed counters](council_counter_locations). Ho
 #### Council Counters &amp; the John Muir Way
 
 ```{r, summary_tables_councils, results = 'asis'}
+```
+
+
+### Counter Locations
+
+####
+```{=html}
+<p>All counters &ndash; NMF and council-managed, showing installation dates and count per location. It should be noted that there is some delay between counter installation and the point from which data is recorded. Counters that came online within the last month or two may therefore not have any data reported in charts shown. Occasionally, also, a counter may go out of action temporarily and sometimes for significant periods of time.
+</p>
+```
+
+####
+
+```{r, counters_installed, fig.height = 8, fig.width = 10}
 ```
 
 
@@ -188,13 +200,32 @@ Row {.tabset .tabset-fade}
 
 ### Monthly Counts per Location
 
+#### Monthly Totals - As the Seasons Change
+
 ```{r, total_count_by_location_and_month}
+```
+
+```{=html}
+  <p>&nbsp;<br />"</p>
+```
+
+---
+
+#### Rainfall Patterns (mm) - Scotland
+
+```{r, historical_weather_scotland_rainfall}
+```
+
+#### Temperature Patterns (C) - Scotland
+
+```{r, historical_weather_scotland_temp}
 ```
 
 ### Changes in Counts by Year
 
 ```{r, total_count_by_location_grouped_by_year}
 ```
+
 
 
 Peak Counts {data-navmenu="Data Stories"}
@@ -228,20 +259,30 @@ Row {.tabset .tabset-fade}
 
 ### Lerwick &ndash; Change through the Seasons
 
-```{r}
+#### Monthly Totals - As the Seasons Change
+
+```{r, total_count_by_location_and_month_lerwick}
 ```
 
-
-Stirling, Bridge of Allan &amp; the Cycle Scheme {data-navmenu="Data Stories"}
-=======================================================================
-
-Row {.tabset .tabset-fade}
------------------------------------------------------------------------
-
-### Stirling, Bridge of Allan &amp; the Cycle Scheme
-
-```{r}
+```{=html}
+  <p>&nbsp;<br />"</p>
 ```
+---
+
+
+#### Rainfall Patterns (mm) - Lerwick, Shetland
+
+```{r, historical_weather_lerwick_rainfall}
+```
+
+#### Temperature Patterns (C) - Lerwick, Shetland
+
+```{r, historical_weather_lerwick_temp}
+```
+
+`r rm(counter_start, roadNames) `
+
+
 
 About
 =======================================================================
