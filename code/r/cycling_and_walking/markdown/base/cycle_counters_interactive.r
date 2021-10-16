@@ -879,7 +879,7 @@ plot_tmp <- add_text(plot_tmp,
 
 
 plot_tmp %>%
-  layout(title = ist(text = "Bicycle Count by Location", y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
+  layout(title = list(text = "Bicycle Count by Location", y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
          xaxis = list(type = "log", tickfont = tickFont, title = list(text = "Total yearly count", titlefont = list(size = 20)), 
                       ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE),
          yaxis = list(type = "log", tickfont = tickFont, ticks = "outside", title = list(text = "Average daily count", titlefont = list(size = 20)), 
@@ -962,7 +962,7 @@ plot_tmp <- add_text(plot_tmp,
 
 
 plot_tmp %>%
-  layout(title = ist(text = "Bicycle Count by Location", y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
+  layout(title = list(text = "Bicycle Count by Location", y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
          xaxis = list(type = "log", tickfont = tickFont, title = list(text = "Total monthly count", titlefont = list(size = 20)), 
                       ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE),
          yaxis = list(type = "log", tickfont = tickFont, title = list(text = "Average daily count", titlefont = list(size = 20)), 
