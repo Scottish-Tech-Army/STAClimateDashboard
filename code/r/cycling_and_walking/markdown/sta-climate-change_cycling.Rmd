@@ -65,20 +65,20 @@ source("base/sta_climate_change_data_parsing.r", local = knitr::knit_global())
 Overview 
 =======================================================================
 
-Row {data-height=75}
+Row {data-height=45}
 -------------------------------------
    
-### Starting with the installation of 11 bicycle and pedestrian counters by Cycling Scotland's National Monitoring Framework (NMF) in a number of counties predominantly in west, central Scotland, from June 2017 and through to Aug 2020, when the 63rd counter was installed in Fort William in the Highlands, and a further three in Edinburgh in Jun and Jul 2021. The snapshots now also include data from more dense networks of council-managed counters and some points along the John Muir Way.
+### Active travel data across Scotland from `r format(start_date, "%b %Y") ` to `r format(end_date, "%b %Y") `.
 
 
-Column {data-height=700}
+Column {data-height=800}
 -----------------------------------------------------------------------
 
-### Cyclists &ndash; Total Count by Month &amp; Year, All Bicycle Counters
+### Cyclists &ndash; Total Count by Month &amp; Year
 ```{r, bicycle_counts}
 ```
 
-### Pedestrians &ndash; Total Count by Month &amp; Year, NMF Counters
+### Pedestrians &ndash; Total Count by Month &amp; Year
 ```{r, pedestrian_counts_nmf}
 ```
 
@@ -88,14 +88,14 @@ Row {.tabset .tabset-fade}
 
 ### Counter Data Summaries
 
-#### NMF Counters
+#### Cycling Scotland's National Monitoring Framework (NMF) Counters
 
 ```{r, summary_tables_nmf, results = 'asis'}
 ```
 
 ```{=html}
 <p>&nbsp;<br />
-Focusing on the NMF counters, at end Sep 2021 over <b>5m bikes</b> and <b>21m pedestrians</b> had been recorded going past all counters.
+Focusing on the NMF counters, at end `r format(end_date, "%b %Y") ` over <b>5m bikes</b> and <b>21m pedestrians</b> had been recorded going past all counters.
 Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. Walking, overall, however continued to rise in 2021. But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then fell again in Aug, rising only slightly in Sep.
 </p>
 <p>
@@ -117,8 +117,7 @@ The data now also includes council-managed counters. However, the much larger nu
 
 ####
 ```{=html}
-<p>All counters &ndash; NMF and council-managed, showing installation dates and count per location. It should be noted that there is some delay between counter installation and the point from which data is recorded. Counters that came online within the last month or two may therefore not have any data reported in charts shown. Occasionally, also, a counter may go out of action temporarily and sometimes for significant periods of time.
-</p>
+<p></p>
 ```
 
 ####
@@ -178,17 +177,16 @@ Row {.tabset .tabset-fade}
 Variation across Locations {data-navmenu="Exploring the Data"}
 =======================================================================
 
-Row {.tabset .tabset-fade}
+Column {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
 ### By Year
 
 ```{r, average_count_by_location_and_year}
 ```
-
 ### By Month
 
-```{r, average_count_by_location_and_month}
+```{r, average_count_by_siteID_location_and_month}
 ```
 
 
@@ -206,7 +204,7 @@ Row {.tabset .tabset-fade}
 ```
 
 ```{=html}
-  <p>&nbsp;<br />"</p>
+  <p>&nbsp;<br /></p>
 ```
 
 ---
@@ -234,7 +232,8 @@ Peak Counts {data-navmenu="Data Stories"}
 Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
->Counts vary from 0 to, occasionally, for cyclists, well over 20K within an hour and almost 70K in a single day. The tables below give a feel for when spikes occurred within each dataset; in East Dunbartonshire the peak hourly count occurs on the day with the peak count. Any or all of day of the week, time of day and month in the year, and recent weather patterns, road type, in addition to a specific event in a location contribute to variation in numbers of especially cyclists in a location.
+>Counts vary from 0 to, occasionally, for cyclists, well over 20K within an hour and almost 70K in a single day. The tables below give a feel for when spikes occurred within each dataset; in East Dunbartonshire the peak hourly count occurs on the day with the peak count. Further investigation is warranted wherever an (unusual) spike is seen that does not map to an event in the location, as these sometimes simply alert to a malfunctioning counter. <br />
+Any or all of day of the week, time of day and month in the year, and recent weather patterns, road type, in addition to a specific event in a location contribute to variation in numbers of especially cyclists in a location.
 
 
 ### Peak Counts
@@ -287,19 +286,41 @@ Row {.tabset .tabset-fade}
 About
 =======================================================================
 
-> About ...
-
-Row
------------------------------------------------------------------------
 
 ```{=html}
 <p>&nbsp;<br />
 <!-- A summary sheet may be downloaded &ndash; <a href="cycle_counters_info_cards.pdf">cycle_counters_info_cards.pdf</a -->
 
-Counter data may be accessed via Cycling Scotland's <a href = "https://usmart.io/org/cyclingscotland/" target = "_blank">Active Travel Open Data Portal</a>.
+<h3>About the Visualisations</h3>
 
-The data used in the analysis presented was accessed via the API at the level of detail for both pedestrian and cycle counters operated under Cycling Scotland's National Monitoring Framework. To use the API you must register and request an API key. Alternatively, a <a href= "https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/7ffbe5d6-fa13-4352-829d-0bb0a58e3355" target = "_blank">dump may be downloaded</a> from the portal.
+<p>
+Starting with the installation of 11 bicycle and pedestrian counters by Cycling Scotland's National Monitoring Framework (NMF) in a number of counties predominantly in west, central Scotland, from `r format(start_date, "%b %Y") ` and through to `r format(end_date, "%b %Y") `. The 63rd counter was installed in Fort William in the Highlands in Aug 2021, and a further three in Edinburgh in Jun and Jul 2021. <br />
+The snapshots now also include data from more dense networks of council-managed counters and some points along the John Muir Way. Some councils manage counters outwith their geographical or administrative boundaries; for instance, the City of Edinburgh Council also provides counts for Dalkeith (Midlothian). Where more than one filter is used, the charts will always group (or order) first by location (e.g., hamlet, village, town or city), then local authority, then data provider.<br />
+Pedestrian count data is currently available only from NMF Counters. Summaries are shown in the overview section.
+</p>
 
+<p>
+Most of the charts are interactive. Mousing over data points will display tooltips with more detail. Click/double-click on legend items to filter data sub-sets. Zoom in by drawing a rectangle around a region of interest and double-click in empty space to return to the full view. Alternatively, use the toolbar on the top, right, to interact with each chart.
+</p><p>
+Charts directly <a href="#variation-across-locations">comparing detail by location</a> use a <a href="https://www.investopedia.com/ask/answers/05/logvslinear.asp" title="Investopedia provide a good description of why you would use a log scale." target = "_blank">log scale (rather than linear/arithmetic)</a> because of the very large differences in counts (and counters) across locations. For instance, Edinburgh and Glasgow had ab out 40 counters each by 2018, and as at mid 2021, 57 and 75 counters respectively. Being the second and first largest (cities) by population, and Edinburgh being especially dense, directly comparing counts to all other locations dwarfs all other data, including even Stirling and Dundee &ndash; we obtain <a href="images/linear_plot_count_by_location.png" title="Why we use a log instead of a linear plot to compare counts across locations" target = "_linear_plot" >plots with most of the data sitting in the bottom, left-hand corner</a>.
+</p>
+
+
+<h3>Counter Locations</h3>
+
+<p>In the overview section we list all counters &ndash; NMF and council-managed, showing installation dates and count per location. It should be noted that there is some delay between counter installation and the point from which data is recorded. Counters that came online within the last month or two may therefore not have any data reported in charts shown. Occasionally, also, a counter may go out of action temporarily and sometimes for significant periods of time.
+</p>
+
+
+<h3>Data Sources</h3>
+
+<p>
+Counter data may be accessed via Cycling Scotland's <a href = "https://usmart.io/org/cyclingscotland/" target = "_blank">Active Travel Open Data Portal</a>. The data feeding into this analysis is updated shortly after the end of each month, to allow for any delays in data reporting.
+</p>
+
+<p>
+All data feeding into this anakysis is extracted at the level of detail of hourly counts by counter, and then aggregated as required. Data may be accessed via the API; this requires registration and request of an API key. Alternatively, a <!-- a href= "https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/7ffbe5d6-fa13-4352-829d-0bb0a58e3355" target = "_blank" -->dump may be downloaded<!-- /a --> from the portal.
+</p>
 
 <!--
 City of Edinburgh Council - Daily cycling counts from automatic cycling counters
@@ -307,9 +328,13 @@ https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/b1f0bd42-e
 
 National Monitoring Framework - all-mode traffic survey results 2017 to 2021 - Cycling Scotland
 https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/b9fdd462-1f45-4252-aedc-fbc596abcd90
--->
-<br /><br />
 
+NOTE TO SELF - PUT NMF ABOUT PEDESTRIAN AND ALSO EXPLANATIONS ABOUT CALCULATIONS
+-->
+<br />
+
+<!-- h3>Weather Data</h3 -->
+<p>
 <a href = "https://www.metoffice.gov.uk/research/climate/maps-and-data/uk-and-regional-series" target = "_blank">Historical weather pattern data</a> was obtained from the Met Office.
 
 </p>
