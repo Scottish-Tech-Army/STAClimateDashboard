@@ -1,0 +1,10 @@
+"0",""
+"0","#source(""base/sta_climate_change_sql_extract.r"", local = knitr::knit_global())"
+"0","load(""cycling_datasets.Rdata"")  #interim - querying and parsing from scratch"
+"2","Warning in readChar(con, 5L, useBytes = TRUE) :"
+"2","
+ "
+"2"," cannot open compressed file 'cycling_datasets.Rdata', probable reason 'No such file or directory'
+"
+"2","Error in readChar(con, 5L, useBytes = TRUE) : cannot open the connection
+"

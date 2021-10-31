@@ -1,0 +1,63 @@
+"0",""
+"0","source(""base/common-traffic_counters.r"")"
+"0","source(""base/common_interaction.r"")"
+"2","Warning:"
+"2"," package ‘khroma’ was built under R version 4.1.1
+"
+"2","Warning:"
+"2"," package ‘plotly’ was built under R version 4.1.1
+"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"
+"2","Registered S3 method overwritten by 'htmlwidgets':
+  method           from         
+  print.htmlwidget tools:rstudio
+"
+"2","
+Attaching package: ‘plotly’
+
+"
+"2","The following object is masked from ‘package:ggplot2’:
+
+    last_plot
+
+"
+"2","The following object is masked from ‘package:stats’:
+
+    filter
+
+"
+"2","The following object is masked from ‘package:graphics’:
+
+    layout
+
+"
+"0","## the following libraries called in sourced base files"
+"0","#library(tidyverse)"
+"0","#library(lubridate)"
+"0","##library(ggtext)"
+"0","#library(DBI)"
+"0",""
+"0","#library(plotly)"
+"0","#library(crosstalk)"
+"0",""
+"0","library(knitr)"
+"0","library(kableExtra)"
+"2","Warning:"
+"2"," package ‘kableExtra’ was built under R version 4.1.1
+"
+"2","
+Attaching package: ‘kableExtra’
+
+"
+"2","The following object is masked from ‘package:dplyr’:
+
+    group_rows
+
+"
+"0","# utilities & c."
+"0",""
+"0","knitr::read_chunk(""base/cycle_counters_interactive.r"")"
+"0",""

@@ -1,0 +1,24 @@
+"0","scot_ghg <- read_csv(here(""data/scottish-ghg-dataset-2019.csv"")) %>%"
+"0","  # fix column names"
+"0","  clean_names() %>%"
+"0","  # remove empty columns"
+"0","  select(-starts_with(""x"")) %>%"
+"0",""
+"0","  # remove the base year line"
+"0","  filter(emission_year != ""BaseYear"", ghg_emissions_mt_co2e > 0) %>%"
+"0","  rename(year = emission_year, "
+"0","         emissions = ghg_emissions_mt_co2e) %>%"
+"0","  mutate(year = as.numeric(year)) %>%"
+"0","  # select relevant columns"
+"0","  select(sg_categories, source_name, year, pollutant, emissions)"
+"1","[1m[1mRows: [1m[22m[34m[34m16986[34m[39m [1m[1mColumns: [1m[22m[34m[34m8[34m[39m
+"
+"1","[36m--[39m [1m[1mColumn specification[1m[22m [36m------------------------------------------------------------------------------------------------------------[39m
+[1mDelimiter:[22m "",""
+[31mchr[39m (7): NCFormat, IPCC, Pollutant, SourceName, EmissionYear, SG_categories, CCP_categories
+[32mdbl[39m (1): GHG Emissions (MtCO2e)
+"
+"1","
+[36mi[39m Use [38;5;235m[48;5;253m[38;5;235m[48;5;253m`spec()`[48;5;253m[38;5;235m[49m[39m to retrieve the full column specification for this data.
+[36mi[39m Specify the column types or set [38;5;235m[48;5;253m[38;5;235m[48;5;253m`show_col_types = FALSE`[48;5;253m[38;5;235m[49m[39m to quiet this message.
+"

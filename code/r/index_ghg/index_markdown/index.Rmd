@@ -1,0 +1,302 @@
+---
+title: |
+  ![](index_images/sta_main_logo.png) 
+  Scottish Tech Army Climate Dashboard
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    theme: bootstrap
+---
+<img src = "index_images/sta_main_logo.png" style="width:100px;"/>
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(janitor)
+library(plotly)
+library(snakecase)
+library(htmltools)
+library(here)
+library(viridis)
+```
+
+```{r common code}
+source("index_base/simp_chart_plot.R")
+```
+
+```{r read in data}
+scot_ghg <- read_csv(here("data/scottish-ghg-dataset-2019.csv")) %>%
+  # fix column names
+  clean_names() %>%
+  # remove empty columns
+  select(-starts_with("x")) %>%
+
+  # remove the base year line
+  filter(emission_year != "BaseYear", ghg_emissions_mt_co2e > 0) %>%
+  rename(year = emission_year, 
+         emissions = ghg_emissions_mt_co2e) %>%
+  mutate(year = as.numeric(year)) %>%
+  # select relevant columns
+  select(sg_categories, source_name, year, pollutant, emissions)
+```
+```{r cleaning ghg data}
+# separate out the sub categories 
+scot_ghg_clean <- scot_ghg %>%
+  # separate categories
+  separate(col = "source_name", into = c("source_name", "source_sub_cat"), sep = " - ") %>% 
+  #structure data for sunburst
+  mutate(source_sub_cat = to_sentence_case(source_sub_cat),
+         inner_circle = "GHG",
+        # clean categories
+         source_sub_cat = str_replace_all(source_sub_cat, "[Hh]gv", "HGV"),
+         source_sub_cat = str_replace_all(source_sub_cat, "Lg vs", "LGVs"),
+        # shorten sector names
+         sg_categories = recode(sg_categories, 
+                                   "Transport (excluding international aviation and shipping)" = "Domestic\nTransport",
+                                   "Agriculture and Related Land Use" = "Agriculture",
+                                   "Business and Industrial Process" = "Business\n&\nIndustry")) %>%
+  group_by(source_name) %>%
+  # amalgamate sources which only have one sub category into one, to limit the number of off shoots on sunburst
+  mutate(
+    source_sub_cat = case_when(
+    n_distinct(source_sub_cat) == 1 ~ NA_character_,
+    TRUE ~ source_sub_cat
+    ),
+    #wrap names for better formatting
+    source_name = str_wrap(source_name, 14),
+    source_sub_cat = str_wrap(source_sub_cat, 14)
+    )
+```
+```{r identify last year and GHG choice}
+#first bit
+last_year <- "2019"
+emission_type <- "Scottish Greenhouse Gas "
+```
+
+```{r preparing sunburst data}
+
+#extract latest year and sum emissions per sector and sub categories
+ghg_tree <- scot_ghg_clean %>%
+  filter(year == last_year) %>%
+  select(-year) %>%
+  group_by(sg_categories, source_name, source_sub_cat) %>%
+  summarise(emissions = sum(emissions)) %>%
+  ungroup()
+
+# create the hierarchial dataset
+parents_top <- tibble(
+  ids = "<b>Greenhouse\nGas\nEmissions</b>",
+  emissions = sum(ghg_tree$emissions),
+  parents = "",
+  labels = "<b>Greenhouse\nGas\nEmissions</b>")
+
+parents <- ghg_tree %>%
+  group_by(sg_categories) %>%
+  summarise(emissions = sum(emissions, na.rm = TRUE)) %>%
+  mutate(parents = "<b>Greenhouse\nGas\nEmissions</b>",
+         labels = sg_categories,
+         ids = paste0("<b>Greenhouse\nGas\nEmissions</b> - ", sg_categories)) %>%
+  select(-sg_categories)
+
+second_level <- ghg_tree %>%
+  mutate(ids = paste0("<b>Greenhouse\nGas\nEmissions</b> - ", sg_categories, " - ", source_name),
+         labels = source_name,
+         parents = paste0("<b>Greenhouse\nGas\nEmissions</b>", " - ", sg_categories)) %>%
+  select(-sg_categories) %>%
+  group_by(ids, parents, labels) %>%
+  summarise(emissions = sum(emissions, na.rm = TRUE))
+
+third_level <- ghg_tree %>%
+  drop_na(source_sub_cat) %>%
+  mutate(ids = paste0("<b>Greenhouse\nGas\nEmissions</b> - ", sg_categories, " - ", source_name, " - ", source_sub_cat),
+         parents = paste0("<b>Greenhouse\nGas\nEmissions</b> - ", sg_categories, " - ", source_name)) %>%
+  rename(labels = source_sub_cat) %>%
+  ungroup() %>%
+  select(ids, parents, labels, emissions)
+
+# combine all levels or heirarchy
+ghg_hierarchy <- bind_rows(parents_top, parents, second_level, third_level)
+```
+
+Row
+-----------------------------------------------------------------------
+### `r emission_type` Emissions since 1990 to the latest available data
+```{r warnings = FALSE, fig.width=15, fig.height = 9}
+
+# Calculate total greenhouse gas emissions per sector per year
+ghg_sector_total <- scot_ghg_clean %>%
+  group_by(year, sg_categories) %>%
+  summarise(total_emissions = sum(emissions)) %>%
+  rename(sector = sg_categories) %>%
+  mutate(sector = recode(sector, 
+                                   "Domestic\nTransport" = "Domestic Transport",
+                                   "Business\n&\nIndustry" = "Business & Industry")) 
+
+# Order the sectors by greatest decrease in emissions
+ghg_sector_total_plot <- ghg_sector_total %>%
+  group_by(sector) %>%
+  arrange(year) %>%
+  mutate(emission_drop = last(total_emissions) - first(total_emissions),
+         emission_drop = replace_na(emission_drop, 0)) %>%
+   ungroup() %>%
+  mutate(sector = fct_reorder(sector, emission_drop))
+
+#colours to match sunburst
+colors <- viridis(10, direction = -1, end = 0.9)
+
+#create list of sectors with colors ordered by last year emissions
+sector_list <- ghg_sector_total_plot %>%
+  arrange(year) %>%
+  filter(year == last_year) %>%
+  select(sector, total_emissions, emission_drop) %>%
+  arrange (desc(total_emissions))
+#add colors to df to match sunburst
+sector_list$sector_colors = colors
+
+#arrange colours to match plot order
+sector_list_color <- sector_list %>%
+  arrange (emission_drop) %>%
+  select (sector_colors)
+
+# Label positionings for the stacked area plot
+ghg_subs <- ghg_sector_total_plot %>%
+  filter(year == 1995) %>%
+  ungroup() %>%
+  arrange(desc(sector)) %>%
+  mutate(cum = cumsum(total_emissions),
+         gap = cum - lag(cum),
+         gap = coalesce(gap, 0.5),
+         position = cum - (gap/2))
+
+#stacked area plot
+  ghg_sector_total_plot %>%
+  ggplot() +
+  aes(x = year, y = total_emissions, group = sector, fill = sector) +
+  geom_area() +
+  scale_fill_manual(values = as.matrix(sector_list_color))+
+  theme_light() +
+  scale_x_continuous(breaks = seq(first(ghg_sector_total_plot$year),
+                                  last(ghg_sector_total_plot$year), 2)) +
+    geom_text(data = ghg_subs,
+          aes(x = 1995, y = position,
+              label = sector),
+          colour = "black",
+          hjust = 0) +
+  # labels
+    theme(legend.position = "none",
+         panel.grid = element_blank(),
+         axis.text = element_text(face = "bold")) +
+   labs(x = "Year",
+        y = "Total Greenhouse Gas Emissions (Mt CO2)")
+ 
+```
+
+
+### Breakdown of `r last_year` Data
+```{r warning = FALSE, message = FALSE, fig.height= 8, fig.width = 10}
+
+# create sunburst
+plot_ly(
+  ghg_hierarchy,
+  ids = ~ids,
+  labels = ~ labels,
+  parents = ~ parents,
+  values = ~ emissions,
+  type = 'sunburst',
+  branchvalues = 'total',
+  # orientation of text labels
+  insidetextorientation='radial',
+  hoverinfo = "text",
+        hovertext = ~paste0("<b>",labels,"</b><br>", round(emissions, 2), " Mt")) %>%
+  layout(colorway = colors)
+
+```
+
+Row
+-----------------------------------------------------------------------
+### [Energy Supply](https://scotland.shinyapps.io/sg-scottish-energy-statistics/?Section=WholeSystem&Chart=EnSupplyEmissions)
+
+```{r}
+
+simp_chart_plot("Energy Supply")
+
+```
+
+### Business & Industry
+
+```{r}
+# Show only "Business & Industry"
+
+simp_chart_plot("Business & Industry")
+
+```
+
+### Agriculture
+
+```{r}
+# Show only Agriculture Emissions
+
+simp_chart_plot("Agriculture")
+
+```
+
+### Residential
+
+```{r}
+
+simp_chart_plot("Residential")
+
+```
+
+### Transport
+
+```{r}
+# Show only Transport Emissions
+
+simp_chart_plot("Transport")
+
+
+```
+
+### Public
+
+```{r}
+
+simp_chart_plot("Public")
+
+```
+
+### Waste Management
+
+```{r}
+
+simp_chart_plot("Waste Management")
+
+```
+
+### Development
+
+```{r}
+
+simp_chart_plot("Development")
+
+```
+
+### Forestry
+
+```{r}
+
+simp_chart_plot("Forestry")
+
+```
+
+### International Aviation & Shipping
+
+```{r}
+
+simp_chart_plot("International Aviation and Shipping")
+
+```
+
+```{=html}
+words
+```
