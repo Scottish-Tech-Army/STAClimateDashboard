@@ -1,13 +1,12 @@
 ---
-title: |
-  ![](index_images/sta_main_logo.png) 
-  Scottish Tech Army Climate Dashboard
+title: Scottish Tech Army Climate Dashboard
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
     theme: bootstrap
+    logo: sta_main_logo.png
 ---
-<img src = "index_images/sta_main_logo.png" style="width:100px;"/>
+
 ```{r setup, include=FALSE}
 library(flexdashboard)
 library(tidyverse)
@@ -211,6 +210,11 @@ plot_ly(
 
 ```
 
+Row {data-height=60}
+-----------------------------------------------------------------------
+
+### __Emissions by sector. The largest emissions reductions are furthest left and those that have increased furthest right__
+
 Row
 -----------------------------------------------------------------------
 ### [Energy Supply](https://scotland.shinyapps.io/sg-scottish-energy-statistics/?Section=WholeSystem&Chart=EnSupplyEmissions)
@@ -295,8 +299,4 @@ simp_chart_plot("Forestry")
 
 simp_chart_plot("International Aviation and Shipping")
 
-```
-
-```{=html}
-words
 ```

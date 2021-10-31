@@ -1,6 +1,0 @@
-"0",""
-"0","knitr::opts_chunk$set(out.width = '100%', out.height = '100%', fig.align = 'left',"
-"0","                      echo = FALSE, warning = FALSE, message = FALSE)"
-"0",""
-"0","# fig.dim = c(12, 5),"
-"0",""

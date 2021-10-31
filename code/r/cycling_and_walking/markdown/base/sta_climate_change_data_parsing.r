@@ -160,15 +160,15 @@ counts_by_month <- padding_cycle_counter_data_from_2017 %>%
 
 ## ---- historical_weather_scotland_from_2017 --------
 
-historical_weather_scotland_from_2017 <- parseMeteoData("data/historical_meteo_data/scotland_mean_temp.tsv", "mean_temp",  start_date, end_date) %>%
+historical_weather_scotland_from_2017 <- parseMeteoData(here("data/historical_meteo_data/scotland_mean_temp.tsv"), "mean_temp",  start_date, end_date) %>%
 
-    full_join(parseMeteoData("data/historical_meteo_data/scotland_max_temp.tsv", "max_temp",start_date, end_date)
+    full_join(parseMeteoData(here("data/historical_meteo_data/scotland_max_temp.tsv"), "max_temp",start_date, end_date)
              ) %>%
 
-    full_join(parseMeteoData("data/historical_meteo_data/scotland_min_temp.tsv", "min_temp", start_date, end_date)
+    full_join(parseMeteoData(here("data/historical_meteo_data/scotland_min_temp.tsv"), "min_temp", start_date, end_date)
              ) %>%
 
-    full_join(parseMeteoData("data/historical_meteo_data/scotland_rainfall.tsv", "rainfall", start_date, end_date)
+    full_join(parseMeteoData(here("data/historical_meteo_data/scotland_rainfall.tsv"), "rainfall", start_date, end_date)
              ) %>%
 
     mutate_at(vars(year), as.ordered)
@@ -180,7 +180,7 @@ datebreaks <- seq(min(historical_weather_scotland_from_2017$monthOfYear),
 
 ## ---- historical_weather_lerwick_from_2017 --------
 
-historical_weather_lerwick_from_2017 <- read_table("data/historical_meteo_data/lerwick.tsv") %>%
+historical_weather_lerwick_from_2017 <- read_table(here("data/historical_meteo_data/lerwick.tsv")) %>%
                                                     filter(rowSums(is.na(.)) != ncol(.))
 
 historical_weather_lerwick_from_2017 <- historical_weather_lerwick_from_2017 %>%

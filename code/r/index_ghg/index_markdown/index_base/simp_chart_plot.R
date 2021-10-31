@@ -21,6 +21,7 @@ simp_chart_plot <- function(detail_choice) {
           axis.text = element_text(face = "bold")) +
     labs(x = "Year",
          y = "Total CO2 Emissions (Mt CO2)")
+  
 }
 
 
