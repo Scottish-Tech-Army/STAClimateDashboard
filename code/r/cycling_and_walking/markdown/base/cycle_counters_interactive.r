@@ -1,25 +1,41 @@
 
 ## ---- bicycle_counts --------
 
-filtered_data <-  padding_cycle_counter_data_from_2017 %>%
+label_all_providers <- "All Bicycle Counters" #Data Providers"
+
+filtered_data <- padding_cycle_counter_data_from_2017 %>%
     full_join(as.data.frame(levels(cycle_counter_data_from_2017$Provider)),
                   by = character()) %>%
     full_join(as.data.frame(levels(cycle_counter_data_from_2017$traffic_mode)),
                   by = character()) %>%
     rename_with(~c(names(padding_cycle_counter_data_from_2017), "Provider", "traffic_mode")) %>%
     filter((traffic_mode == "bicycle") & (monthOfYear <= end_date)) %>%
-    select(-time) %>%
+    select(- c(monthOfYear, time)) %>%
 
     full_join(cycle_counter_data_from_2017 %>%
         filter(traffic_mode == "bicycle") %>%
         group_by(Provider, traffic_mode, year, month) %>%
         summarise(average = mean(count, na.rm = TRUE), 
                   count = sum(count, na.rm = TRUE)
-                 )) %>%
+                 ) %>%
+             
+        bind_rows(cycle_counter_data_from_2017 %>%
+                    filter(traffic_mode == "bicycle") %>%
+                    mutate(Provider = label_all_providers) %>%
+                    group_by(Provider, traffic_mode, year, month) %>%
+                    summarise(average = mean(count, na.rm = TRUE), 
+                              count = sum(count, na.rm = TRUE)
+                    ) 
+                )
+             ) %>%
 
-        mutate(month = factor(month, levels = month.abb)) %>%
+        mutate(month = factor(month, levels = month.abb),
+               monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
+        relocate(monthOfYear, .after = month) %>%
         mutate_at(vars(year), as.ordered) %>%
         mutate_at(vars(Provider, traffic_mode), as.factor) %>%
+        mutate_at(vars(Provider), ~ fct_relevel(., label_all_providers)) %>%
+        mutate_at(vars(Provider), ~ fct_relevel(., c("John Muir Way", default_provider), after = Inf)) %>%
         mutate(pseudo_point = if_else(is.na(average), 0, 1),
                tooltip = if_else((pseudo_point == 0), 
                                  "", 
@@ -34,19 +50,19 @@ providers <- levels(filtered_data$Provider)
 years <- levels(filtered_data$year) 
 
 steps <- list()
-plot_tmp <- plot_ly(height = 350, width = 700)
+plot_tmp <- plot_ly(height = 380, width = 700)
 
 
 for (i in seq_along(providers)) {
     for (j in seq_along(years)) {
         
         plot_tmp <- add_lines(plot_tmp, data = filtered_data %>%
-                                            filter((Provider == providers[i]) & year == years[j]),
+                                                filter((Provider == providers[i]) & year == years[j]),
                               
                               x = ~ month, 
                               y = ~ count, 
                               text = ~ tooltip, 
-                              visible = (providers[i] == default_provider), 
+                              visible = (providers[i] == label_all_providers), 
                               name = years[j], 
 
                               type = "scatter",
@@ -69,20 +85,22 @@ for (i in seq_along(providers)) {
 
 
 plot_tmp %>%
-    layout(#title = "Monthly Totals",
-           xaxis = list(tickfont = tickFont, title = list(text = ""), ticks = "outside", showgrid = FALSE), 
+    layout(xaxis = list(tickfont = tickFont, title = list(text = ""), ticks = "outside", showgrid = FALSE, 
+                        zeroline = TRUE, rangemode = "tozero"), # both ignored post restyle :@
            yaxis = list(tickfont = tickFont, title = list(text = "Bicycle", font = list(size = 20)), ticks = "outside"), 
-           margin = list(l = 0),
+           margin = list(l = 5),
         
-           updatemenus = list(list(active = (which(str_detect(providers, fixed(default_provider, TRUE))) - 1), 
-                                   x = 0.35, y = 1.15,
+           annotations = list(x = -0.075, y = -0.25, text = "<b>Select Data Provider</b>", font = list(size = 14), 
+                              yref = "paper", xref = "paper", xanchor = "left", yanchor = "bottom", showarrow = FALSE),
+           updatemenus = list(list(active = (which(str_detect(providers, fixed(label_all_providers, TRUE))) - 1), 
+                                   x = 0.72, y = -0.15, direction = "up",
                                    buttons = steps
                                 )) # end dropdown
     ) %>%
     config(displayModeBar = FALSE) 
 
 
-rm(filtered_data)
+rm(label_all_providers)
 
 
 
@@ -108,7 +126,8 @@ plot1 <- cycle_counter_data_from_2017 %>%
 
 convertToPlotly(plot1, height = 350, width = 700, 
                 xaxis = list(tickfont = tickFont),
-                yaxis = list(tickfont = tickFont, title = list(text = "Pedestrian", font = list(size = 20)))           
+                yaxis = list(tickfont = tickFont, title = list(text = "Pedestrian", font = list(size = 20))),
+                legend = list(font = list(size = 12), tracegroupgap = 1)
                ) %>%
     config(displayModeBar = FALSE)
 
@@ -821,23 +840,25 @@ plot_tmp %>%
 
 plot_tmp <- plot_ly(height = 680, width = 900, 
                     data = count_by_location %>%
-                        mutate_at(vars(daily_average, count), ~replace(., . == -Inf, NA)) %>%
-                        group_by(LocalAuthority, Location, year) %>%
-                        summarise(tally = n(),
-                                 daily_average = mean(daily_average, na.rm = TRUE),
-                                 count = sum(count, na.rm = TRUE)) %>%
-                        mutate(log_daily_average = if_else(daily_average == 0, 0, log(daily_average)),
-                               tooltip = paste(Location, "-", formatNumber(count),  "bicycles in", year, ", daily average", round(daily_average, 2)))%>%
-                        mutate_at(vars(count), ~replace(., is.na(daily_average), -Inf)) %>%
-                        mutate_at(vars(daily_average, count), ~replace(., is.na(.), -Inf)) %>%
-                        mutate_at(vars(log_daily_average), ~replace(., is.na(.), -1))          
+                                mutate_at(vars(daily_average_by_siteID, count), ~replace(., . == -Inf, NA)) %>%
+
+                                distinct(year, month, LocalAuthority, Location, daily_average, counter_count, daily_average_by_siteID, count) %>%                                
+                                group_by(LocalAuthority, Location, year) %>%
+                                summarise(tally = n(),
+                                         daily_average_by_siteID = mean(daily_average_by_siteID, na.rm = TRUE),
+                                         count = sum(count, na.rm = TRUE)) %>%
+                                mutate(log_daily_average_by_siteID = if_else(daily_average_by_siteID == 0, 0, log(daily_average_by_siteID)),
+                                       tooltip = paste(Location, "-", formatNumber(count),  "bicycles in", year, ", daily average (across counters):", formatNumber(round(daily_average_by_siteID))))%>%
+                                mutate_at(vars(count), ~replace(., is.na(daily_average_by_siteID), -Inf)) %>%
+                                mutate_at(vars(daily_average_by_siteID, count), ~replace(., is.na(.), -Inf)) %>%
+                                mutate_at(vars(log_daily_average_by_siteID), ~replace(., is.na(.), -1))          
                    )
 
 
 plot_tmp <- add_trace(plot_tmp,
                       
                       x = ~ count,
-                      y = ~ daily_average,
+                      y = ~ daily_average_by_siteID,
                       text = ~ tooltip,               
                       name = ~ LocalAuthority, 
                       frame = ~ year, 
@@ -847,7 +868,7 @@ plot_tmp <- add_trace(plot_tmp,
                       mode = "markers", 
                       marker = list(sizemode = "diameter"), 
                       sizes = c(1, 25),
-                      size = ~ log_daily_average, 
+                      size = ~ log_daily_average_by_siteID, 
                       fill = ~ "",
                       hoverinfo = "text", 
 
@@ -861,7 +882,7 @@ plot_tmp <- add_trace(plot_tmp,
 plot_tmp <- add_text(plot_tmp,
 
                      x = ~ count,
-                     y = ~ daily_average,
+                     y = ~ daily_average_by_siteID,
                      frame = ~ year, 
                      ids = ~ Location,
 
@@ -882,7 +903,8 @@ plot_tmp %>%
   layout(title = list(text = "Bicycle Count by Location", y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
          xaxis = list(type = "log", tickfont = tickFont, title = list(text = "Total yearly count", titlefont = list(size = 20)), 
                       ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE),
-         yaxis = list(type = "log", tickfont = tickFont, ticks = "outside", title = list(text = "Average daily count", titlefont = list(size = 20)), 
+         yaxis = list(type = "log", tickfont = tickFont, ticks = "outside", 
+                      title = list(text = "Average daily count - across counters per location", titlefont = list(size = 20)), 
                       ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE), 
          legend = list(title = list(text = "Local Authority", font = list(size = 16)), 
                        itemsizing = "constant", #itemwidth = 30, #sizing ignored ...
@@ -898,7 +920,7 @@ plot_tmp %>%
 ## ---- average_count_by_location_and_month --------
 
 
-plot_tmp <- plot_ly(height = 680, width = 900, 
+plot_tmp <- plot_ly(height = 650, width = 750, #680, 900, 
                     data = count_by_location %>%
 
                         filter(between(monthOfYear, start_date, end_date)) %>%
@@ -961,13 +983,14 @@ plot_tmp <- add_text(plot_tmp,
                     )
 
 
-plot_tmp %>%
-  layout(title = list(text = "Bicycle Count by Location", y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
-         xaxis = list(type = "log", tickfont = tickFont, title = list(text = "Total monthly count", titlefont = list(size = 20)), 
+plot_tmp1 <- plot_tmp %>%
+  layout(title = list(text = "Bicycle Count by Location", font = list(size = 22), 
+                      y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
+         xaxis = list(type = "log", tickfont = tickFont, title = list(text = "Total monthly count", font = list(size = 15)), 
                       ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE),
-         yaxis = list(type = "log", tickfont = tickFont, title = list(text = "Average daily count", titlefont = list(size = 20)), 
+         yaxis = list(type = "log", tickfont = tickFont, title = list(text = "Average daily count", font = list(size = 15)), 
                       ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE), 
-         legend = list(title = list(text = "Local Authority", font = list(size = 16)), 
+         legend = list(title = list(text = "Local Authority", font = list(size =  14)), font = list(size = 12),
                        itemsizing = "constant", #itemwidth = 30, #sizing ignored ...
                        tracegroupgap = 1), 
          margin = list(l = 5)
@@ -975,6 +998,98 @@ plot_tmp %>%
         ) %>%
         animation_opts(1000, transition = 500, redraw = TRUE) %>%
         animation_slider(currentvalue = list(prefix = paste0("Month: "), font = list(color = "grey"))) 
+
+
+
+## ---- average_count_by_siteID_location_and_month --------
+
+
+plot_tmp <- plot_ly(height = 680, width = 900, #6=50, 750, 
+                    data = count_by_location %>%
+
+                        filter(between(monthOfYear, start_date, end_date)) %>%
+
+                        mutate(monthOfYear2 = factor(format(monthOfYear, "%b-%Y"))) %>%
+                        mutate(monthOfYear2 = fct_reorder(monthOfYear2, monthOfYear)) %>%
+                        select(-monthOfYear) %>%
+                        rename(monthOfYear = monthOfYear2) %>%
+                        relocate(monthOfYear, .after = month) %>%
+                        mutate(log_daily_average_by_siteID = if_else(daily_average_by_siteID == 0, 0, log(daily_average_by_siteID)),
+                               tooltip = paste(Location, "-", formatNumber(count),  "bicycles in", monthOfYear, 
+                                               ", daily average", formatNumber(round(daily_average_by_siteID)), "(across", 
+                                               paste0(counter_count, " counter", if_else(counter_count == 1, ")", "s)"))),
+                              ) %>%
+
+                        mutate_at(vars(count), ~replace(., is.na(daily_average_by_siteID), -Inf)) %>%
+                        mutate_at(vars(daily_average_by_siteID, count), ~replace(., is.na(.), -Inf)) %>%
+                        mutate_at(vars(log_daily_average_by_siteID), ~replace(., is.na(.), -1))
+                   )
+
+
+plot_tmp <- add_trace(plot_tmp,
+                      
+                      x = ~ count,
+                      y = ~ daily_average_by_siteID,
+                      text = ~ tooltip,               
+                      name = ~ LocalAuthority, 
+                      frame = ~ monthOfYear, #year, 
+                      ids = ~ Location,
+
+                      type = "scatter", 
+                      mode = "markers", 
+                      marker = list(sizemode = "diameter"), 
+                      sizes = c(1, 25),
+                      size = ~ log_daily_average_by_siteID, 
+                      fill = ~ "",
+                      hoverinfo = "text", 
+
+                      color = ~ LocalAuthority, 
+                      #colors = ?,
+                      showlegend = TRUE,
+                      legendgroup = ~ LocalAuthority
+                     )
+
+    
+plot_tmp <- add_text(plot_tmp,
+
+                     x = ~ count,
+                     y = ~ daily_average_by_siteID,
+                     frame = ~ monthOfYear, #year, 
+                     ids = ~ Location,
+
+                     type = "scatter",
+                     mode = "text", 
+                     text = ~ Location,  
+                     textposition = "top middle",
+                     color = ~ LocalAuthority, 
+                      #textfont = ~ list( size = 8),
+
+                     #name = ~ LocalAuthority,
+                     showlegend = FALSE,
+                     legendgroup = ~ LocalAuthority
+                    )
+
+
+#plot_tmp2 <- 
+plot_tmp %>%
+  layout(title = list(text = "Bicycle Count by Counter & Location", font = list(size = 22), y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
+         xaxis = list(type = "log", tickfont = tickFont, title = list(text = "Total monthly count", font = list(size = 15)), 
+                      ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", 
+                      mirror = TRUE, zeroline = FALSE),
+         yaxis = list(type = "log", tickfont = tickFont, 
+                      title = list(text = "Average daily count - across counters per location", font = list(size = 15)), 
+                      ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE), 
+         legend = list(title = list(text = "Local Authority", font = list(size = 14)), font = list(size = 12),
+                       itemsizing = "constant", #itemwidth = 30, #sizing ignored ...
+                       tracegroupgap = 1), 
+         margin = list(l = 5)
+          
+        ) %>%
+        animation_opts(1000, transition = 500, redraw = TRUE)  %>%
+        animation_slider(currentvalue = list(prefix = paste0("Month: "), font = list(color = "grey")))
+
+
+#bscols(plot_tmp1, plot_tmp2, widths = c(6, 6))
 
 
 
@@ -1204,24 +1319,24 @@ plot1 <- counter_data %>%
 
     ggplot(aes(y = fct_reorder2(Location, desc(bicycle_counters), desc(LatestInstallation)), x = bicycle_counters, 
                #frame = CycleCounter, ids = Location, 
-               text = paste0(Location, " (", LocalAuthority, ") - ", bicycle_counters) #, " installed ", CycleCounter)
               )) +
         geom_segment(aes(xend = 0, yend = Location), alpha = 0.45) +
-        geom_point(aes(colour = LocalAuthority), alpha = 0.45, size = 1) + 
+        geom_point(aes(colour = LocalAuthority, text = paste0(Location, " (", LocalAuthority, ") - ", bicycle_counters)), 
+                   alpha = 0.45, size = 1) + 
         guides(col = guide_legend(ncol = 1, keyheight = 0.75)) + 
         scale_x_log10() + 
         ylab("") + # Location") +
-        xlab("No. of Bicycle Counters Installed\n\n") + # pad bottom to align x-axes
+        xlab("") + #No. of Bicycle Counters Installed\n\n") + # pad bottom to align x-axes
         #ggtitle("No. of Bicycle Counters Installed") + 
-        cop_cycling_theme + 
+        cop_cycling_theme +
+        #scale_fill_hue(c = 20) + 
         theme(axis.text.y = element_text(size = 6),
               axis.text.x = element_text(size = 6),
               axis.title = element_text(size = 11),
-              #legend.position = "none",
+              legend.position = "none",
               legend.title = element_text(size = 10),
               legend.text = element_text(size = 8)
-             ) +
-        scale_fill_hue(c = 20)
+             )
 
 
 ## counter_installation_dates --------
@@ -1232,37 +1347,62 @@ datebreaks <- seq(min(counter_data$CycleCounter), max(counter_data$CycleCounter)
 #options(repr.plot.width = 6.8, repr.plot.height = 13) # 10)
 
 plot2 <- counter_data %>%
+            mutate(tooltip = paste0(Location, " (", LocalAuthority, ") - ", bicycle_counters, 
+                                    " installed ", format(CycleCounter, "%b-%Y"))) %>%
 
     group_by(LocalAuthority, Location) %>%
     mutate(bicycle_counters = sum(bicycle_counters), 
               LatestInstallation = max(LatestInstallation)) %>%
 
     ggplot(aes(y = fct_reorder2(Location, desc(bicycle_counters), desc(LatestInstallation)), x = CycleCounter, 
-               frame = CycleCounter, ids = Location, 
-               text = paste0(Location, " (", LocalAuthority, ") - ", bicycle_counters, " installed ", CycleCounter)
+               #frame = CycleCounter, ids = Location, 
               )) +
         geom_segment(aes(xend = min(CycleCounter), yend = Location), alpha = 0.45) +
-        geom_point(aes(colour = LocalAuthority), #shape = Provider), 
+        geom_point(aes(colour = LocalAuthority, text = tooltip), #shape = Provider), 
                    size = 1, alpha = 0.45, show.legend = FALSE) + 
         ylab("") + # Location") +
         guides(colour = "none") + 
-        scale_x_date("Counter Installation Date",
+        scale_x_date("", #Counter Installation Date",
                      breaks = datebreaks, labels = scales::date_format("%b-%Y")) +
-        cop_cycling_theme + 
-        
-        scale_fill_hue(c = 20) +
+        cop_cycling_theme +         
+        #scale_fill_hue(c = 20) +
         theme(axis.text.y = element_text(size = 6),
               axis.text.x = element_text(size = 6, angle = 45, vjust = 0.8, hjust = 0.8),
               axis.title = element_text(size = 11), 
               legend.position = "none")
 
 
-options(repr.plot.width = 12, repr.plot.height = 11) #18/12
-gridExtra::grid.arrange(plot2, 
-                        plot1 + theme(legend.position = "none"), 
-                        create_shared_legend(plot1), 
-                        ncol = 3, widths = c(1.8, 1.8, 1)
-                        )
+#options(repr.plot.width = 12, repr.plot.height = 11) #18/12
+#gridExtra::grid.arrange(plot2, 
+#                        plot1 + theme(legend.position = "none"), 
+#                        create_shared_legend(plot1), 
+#                        ncol = 3, widths = c(1.8, 1.8, 1)
+#                        )
+
+
+bscols(
+    convertToPlotly(plot2, height = 1000, width = 480, 
+                    #xaxis = list(tickfont = tickFont),
+                    yaxis = list(tickfont = list(size = 8))           
+                   ) %>%
+        layout(title = list(text = "\nCounter Installation Dates", font = list(size = 18)), 
+               margin = list(l = 5, t = -5)
+               ) %>%
+        config(displayModeBar = FALSE),
+
+    convertToPlotly(plot1, height = 1000, width = 400, 
+                    #xaxis = list(tickfont = tickFont),
+                    yaxis = list(tickfont = list(size = 8))           
+                   ) %>%
+        layout(title = list(text = "\nNo. of Bicycle Counters Installed", font = list(size = 18)), 
+               margin = list(l = 5, t = -0.1)
+               ) %>%
+        config(displayModeBar = FALSE),
+
+
+    widths = c(6, 5)
+)
+
 
 
 ## ---- total_count_by_location_and_month_lerwick --------

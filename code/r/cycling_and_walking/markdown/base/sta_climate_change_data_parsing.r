@@ -56,6 +56,9 @@ counter_data <- counter_data %>%
 
 ## ---- count_by_location --------
 
+# NOTE - multiple counter installations (CycleCounter) in some months -
+# if summarising further need to take distinct rows excluding this variable
+
 count_by_location <- padding_cycle_counter_data_from_2017 %>%
     distinct(year, month) %>%
 
@@ -68,12 +71,32 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
 
                 filter(traffic_mode == "bicycle") %>%
                 group_by(Location, year, month, date) %>%
-                summarise(count = sum(count)) %>%
+                summarise(count = sum(count, na.rm = TRUE)) %>%
+              
                 group_by(Location, year, month) %>%
-                summarise(daily_average = mean(count),
-                          count = sum(count)) %>%
+                summarise(daily_average = mean(count, na.rm = TRUE),
+                          count = sum(count, na.rm = TRUE)) %>%
 
+              
+                left_join(cycle_counter_data_from_2017 %>%
 
+                            filter(traffic_mode == "bicycle") %>%
+                            group_by(siteID, Location, year, month, date) %>%
+                            summarise(count = sum(count, na.rm = TRUE)) %>%
+                          
+                            group_by(siteID, Location, year, month) %>%
+                            summarise(daily_average_by_siteID = mean(count, na.rm = TRUE)) %>%
+                          
+                            group_by(Location, year, month) %>%
+                            summarise(daily_average_by_siteID = mean(daily_average_by_siteID),
+                                      counter_count = n())
+                          
+                ) %>% # end internal join
+              
+                relocate(daily_average_by_siteID, .after = daily_average) %>%
+                relocate(counter_count, .after = daily_average) %>%
+
+              
                 ungroup() %>%
                 #arrange(year, month) %>%
 
@@ -91,9 +114,13 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
 
                 relocate(monthOfYear, .after = month) %>%
     
-                mutate_at(vars(LocalAuthority), ~replace(., is.na(.), "Not Known")) %>%
+                # for now exclude - inspect shows these as count NA so won't show up in charts regardless
+                # actual values noted, will need a manual pass for reverse geocode
+                drop_na(LocalAuthority) %>%
+                #mutate_at(vars(LocalAuthority), ~replace(., is.na(.), "Not Known")) %>%
                 mutate_at(vars(LocalAuthority, Location), as.factor) %>%
-                mutate_at(vars(LocalAuthority), ~ fct_relevel(., "Not Known", after = Inf)) %>%
+                #mutate_at(vars(LocalAuthority), ~ fct_relevel(., "Not Known", after = Inf)) %>%
+
 
                 mutate_at(vars(year), as.ordered) %>%
                 mutate(month = factor(month, levels = month.abb)) %>%
@@ -101,10 +128,12 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
                        tooltip = if_else((pseudo_point == 0),
                                          "",
                                          paste(Location, "-", month, year,
-                                               "\nAverage daily count:", round(daily_average, 2),
+                                               "\nAverage daily count:", formatNumber(round(daily_average)),
+                                               paste0("(", counter_count, " counter", if_else(counter_count == 1, ")", "s)")),
                                                "\nTotal count:", formatNumber(count))),
                        daily_average = replace_na(daily_average, -Inf),
                        count = replace_na(count, -Inf))
+
 
 
 ## ---- counts_time_of_day_by_month_and_year --------
