@@ -23,7 +23,7 @@ output:
 ```{r global-options, include = FALSE, cache = FALSE}
 
 knitr::opts_chunk$set(out.width = '100%', out.height = '100%', fig.align = 'left',
-                      echo = FALSE, warning = FALSE, message = FALSE)
+                      echo = FALSE, warning = FALSE, message = FALSE, cache.lazy = FALSE)
 
 # fig.dim = c(12, 5),
 

@@ -1,0 +1,140 @@
+---
+title: Scottish Tech Army Climate Dashboard - Transport
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    theme: bootstrap
+    logo: sta_main_logo.png
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(janitor)
+library(plotly)
+library(snakecase)
+library(htmltools)
+library(here)
+library(viridis)
+```
+
+```{r read in data}
+scot_ghg <- read_csv(here("data/scottish-ghg-dataset-2019.csv")) %>%
+  # fix column names
+  clean_names() %>%
+  # remove empty columns
+  select(-starts_with("x")) %>%
+
+  # remove the base year line
+  filter(emission_year != "BaseYear", ghg_emissions_mt_co2e > 0) %>%
+  rename(year = emission_year, 
+         emissions = ghg_emissions_mt_co2e) %>%
+  mutate(year = as.numeric(year)) %>%
+  # select relevant columns
+  select(sg_categories, source_name, year, pollutant, emissions)
+```
+```{r cleaning ghg data}
+# separate out the sub categories 
+scot_ghg_clean <- scot_ghg %>%
+  # separate categories
+  separate(col = "source_name", into = c("source_name", "source_sub_cat"), sep = " - ") %>% 
+  #structure data for sunburst
+  mutate(source_sub_cat = to_sentence_case(source_sub_cat),
+         inner_circle = "GHG",
+        # clean categories
+         source_sub_cat = str_replace_all(source_sub_cat, "[Hh]gv", "HGV"),
+         source_sub_cat = str_replace_all(source_sub_cat, "Lg vs", "LGVs"),
+        # shorten sector names
+         sg_categories = recode(sg_categories, 
+                                   "Transport (excluding international aviation and shipping)" = "Domestic\nTransport",
+                                   "Agriculture and Related Land Use" = "Agriculture",
+                                   "Business and Industrial Process" = "Business\n&\nIndustry")) %>%
+  group_by(source_name) %>%
+  # amalgamate sources which only have one sub category into one, to limit the number of off shoots on sunburst
+  mutate(
+    source_sub_cat = case_when(
+    n_distinct(source_sub_cat) == 1 ~ NA_character_,
+    TRUE ~ source_sub_cat
+    ),
+    #wrap names for better formatting
+    source_name = str_wrap(source_name, 14),
+    source_sub_cat = str_wrap(source_sub_cat, 14)
+    )
+```
+```{r identify last year and GHG choice}
+#first bit
+last_year <- "2019"
+emission_type <- "Scottish Greenhouse Gas "
+```
+
+Row
+-----------------------------------------------------------------------
+### `r emission_type` Emissions for Transport since 1990 to the latest available data
+```{r warnings = FALSE, fig.width=15, fig.height = 9}
+
+# Calculate total greenhouse gas emissions per source per year
+ghg_source_total <- scot_ghg_clean %>%
+  filter(sg_categories == "Transport") %>%
+  group_by(year, source_name) %>%
+  summarise(total_emissions = sum(emissions))
+
+# Order the sectors by greatest decrease in emissions
+ghg_source_total_plot <- ghg_source_total %>%
+  group_by(source_name) %>%
+  arrange(year) %>%
+  mutate(emission_drop = last(total_emissions) - first(total_emissions),
+         emission_drop = replace_na(emission_drop, 0)) %>%
+   ungroup() %>%
+  mutate(source_name = fct_reorder(source_name, emission_drop))
+
+colors <- viridis(10, direction = -1, end = 0.9)
+
+#create list of sources with colors ordered by last year emissions
+Source_list <- ghg_source_total_plot %>%
+  arrange(year) %>%
+  filter(year == last_year) %>%
+  select(source_name, total_emissions, emission_drop) %>%
+  arrange (desc(total_emissions))
+
+# Label positionings for the stacked area plot
+ghg_source_subs <- ghg_source_total_plot %>%
+  filter(year == 1995) %>%
+  ungroup() %>%
+  arrange(desc(source_name)) %>%
+  mutate(cum = cumsum(total_emissions),
+         gap = cum - lag(cum),
+         gap = coalesce(gap, 0.5),
+         position = cum - (gap/2))
+
+#stacked area plot
+  ghg_source_total_plot %>%
+  ggplot() +
+  aes(x = year, y = total_emissions, group = source_name, fill = source_name) +
+  geom_area() +
+  theme_light() +
+  scale_x_continuous(breaks = seq(first(ghg_source_total_plot$year),
+                                  last(ghg_source_total_plot$year), 2)) +
+        geom_text(data = ghg_source_subs,
+          aes(x = 1995, y = position,
+              label = source_name),
+          colour = "black",
+          hjust = 0) +
+  # labels
+    theme(legend.position = "none",
+         panel.grid = element_blank(),
+         axis.text = element_text(face = "bold")) +
+   labs(x = "Year",
+        y = "Transport Greenhouse Gas Emissions (Mt CO2)")
+ 
+```
+
+
+### Breakdown of `r last_year` Data
+
+
+Row {data-height=60}
+-----------------------------------------------------------------------
+
+### __Detailed bits__
+
+
