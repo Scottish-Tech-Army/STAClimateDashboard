@@ -4,8 +4,10 @@ source("base/common.r")
 
 #options(lubridate.week.start = 1) # need to group week-ends - not set, though...
 
+label_all_bicycle_providers <- "All Bicycle Counters" #Data Providers"
 default_provider <- "National Monitoring Framework (CS)"
 
+transportation_modes <- c("Car", "Taxi", "LGV", "HGV", "ServiceBus", "Coach", "MCycle", "Cyclist", "Pedestrian")
 
 
 cop_cycling_theme <- 
@@ -251,4 +253,122 @@ parseMeteoData <-
         invisible(historical_weather)
 
 }
+
+
+
+loadAndParseTrafficSurveyData <-
+    function(pathTofile, localAuthorityData, countInterval = "quarter_hour", selectColumns = NULL, glimpseContent = FALSE) {
+        
+        print(paste0("Parsing file '", pathTofile, "' ..."))
+        
+        
+        data_loaded <- read_csv(pathTofile, trim_ws = T, na = c("N/A", "No data", "No Data")) %>%
+                            filter(rowSums(is.na(.)) != ncol(.))
+        
+        data_loaded <- data_loaded %>%
+                            mutate_at(c("Code"), ~ str_remove(., "Site\\s+")) %>%
+                            #rename_with(., ~ (gsub("/|_|\\s+", "", .x)))
+                            rename_with(., ~ (gsub("[^a-zA-Z]", "", .x))) #more general
+        
+        
+        
+            
+        join_params <- c("Code" = "SWSiteID")
+        if ("Settlement" %in% names(data_loaded)) # Site in quarter-hourly data, Settlement in hourly ..
+            join_params <- c("Settlement" = "LocationPlace", join_params)
+        else if ("Site" %in% names(data_loaded))
+            join_params <- c("Site" = "LocationPlace", join_params)
+
+        if ("LocalAuthority" %in% names(data_loaded))
+            join_params <- c("LocalAuthority" = "LocalAuthority", join_params)
+
+    
+        if (!("Date" %in% names(data_loaded))) {
+            data_loaded <- data_loaded %>%
+                mutate(Date = as.Date(StartDateTime)) %>%
+                relocate(Date, .before = StartDateTime)
+        }
+        if (!("TimePeriod" %in% names(data_loaded))) {
+
+            data_loaded <- data_loaded %>%
+
+                mutate(TimePeriod = format(StartDateTime, format = "%H:%M"),
+                       TimePeriod = str_sub(TimePeriod, end = 5),
+                       TimePeriodEnd = format(EndDateTime, format = "%H:%M"),
+                       TimePeriodEnd = str_sub(TimePeriodEnd, end = 5),
+                       TimePeriod = paste(TimePeriod, "-", TimePeriodEnd)) %>%
+                select(-TimePeriodEnd) %>%
+                relocate(TimePeriod, .before = StartDateTime)
+        }
+        if ("Total" %in% names(data_loaded)) {
+
+            data_loaded <- data_loaded %>%
+                select(-Total)
+        }
+
+        
+        data_loaded <- data_loaded %>%
+        
+            inner_join(localAuthorityData %>%
+                            select(LocalAuthority, LocationPlace, SWSiteID, RoadNumber, RoadType),
+                       by = join_params
+                      ) %>%
+            mutate(CountPeriod = paste0(month(Date, label = TRUE), "-", year(Date))) %>%
+            select(CountPeriod, everything())
+        
+        
+        if (sum(c("Location", "Site") %in% names(data_loaded)) == 2) {
+            data_loaded <- data_loaded %>%
+                rename_with(~ c("RoadName", "Location"), c("Location", "Site"))
+        
+        }
+        if (sum(c("Street", "Settlement") %in% names(data_loaded)) == 2) {
+            data_loaded <- data_loaded %>%
+                rename_with(~ c("RoadName", "Location"), c("Street", "Settlement"))
+        }
+        if ("Area" %in% names(data_loaded)) { # matches LocalAuthority
+
+            data_loaded <- data_loaded %>%
+                select(-Area)
+        }
+        if (!("countInterval" %in% names(data_loaded))) {
+
+            data_loaded <- data_loaded %>%
+                mutate(countInterval = countInterval)
+        }
+
+            
+        params_as_factor <- c("Code", "LocalAuthority", "Location", "RoadName", "Context", "Direction", "Side",
+                              "CountPeriod", "TimePeriod", "countInterval", "TransportationMode")
+        params_as_count <- c("ID", transportation_modes)
+
+        data_loaded <- data_loaded %>%
+        
+            mutate_at(intersect(names(data_loaded), params_as_count), as.integer) %>%
+            pivot_longer(all_of(transportation_modes), names_to = "TransportationMode", values_to = "count") %>%
+            mutate_at(intersect(colnames(.), params_as_factor), as.factor) %>% #- doesn't include new columns
+
+            relocate(LocalAuthority, .before = Location) %>%
+            relocate(c(RoadNumber, RoadType), .after = RoadName)
+ 
+        
+        if (sum(c("Latitude", "Longitude") %in% names(data_loaded)) < 2) # at least one not set
+            data_loaded <- data_loaded %>%
+        
+                mutate(Latitude = NA,
+                       Longitude = NA) %>%
+                mutate_at(c("Latitude", "Longitude"), as.double)
+  
+        
+        if (!is_null(selectColumns))
+            data_loaded <- data_loaded %>%
+                select(all_of(selectColumns))
+        
+        
+        if (glimpseContent)
+            glimpse(data_loaded)
+        
+        invisible(data_loaded)
+    }
+
 
