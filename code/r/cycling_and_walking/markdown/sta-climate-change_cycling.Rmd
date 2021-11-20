@@ -23,7 +23,7 @@ output:
 ```{r global-options, include = FALSE, cache = FALSE}
 
 knitr::opts_chunk$set(out.width = '100%', out.height = '100%', fig.align = 'left',
-                      echo = FALSE, warning = FALSE, message = FALSE, cache.lazy = FALSE)
+                      echo = FALSE, warning = FALSE, message = FALSE)
 
 # fig.dim = c(12, 5),
 
@@ -45,7 +45,6 @@ source("base/common_interaction.r")
 
 library(knitr)
 library(kableExtra)
-library(here)
 
 
 # utilities & c.
@@ -54,12 +53,11 @@ knitr::read_chunk("base/cycle_counters_interactive.r")
 
 ```
 
-```{r sqa_data_extraction, cache = TRUE}
+```{r sqa_data_extraction, cache.lazy = FALSE}
 
 #source("base/sta_climate_change_sql_extract.r", local = knitr::knit_global())
-load(here("data/cycling_datasets.Rdata"))  #interim - querying and parsing from scratch
+load("cycling_datasets.Rdata")  #interim - querying and parsing from scratch
 source("base/sta_climate_change_data_parsing.r", local = knitr::knit_global())
-
 ```
 
 
@@ -96,9 +94,11 @@ Row {.tabset .tabset-fade}
 
 ```{=html}
 <p>&nbsp;<br />
-Focusing on the NMF counters, at end `r format(end_date, "%b %Y") ` over <b>5m bikes</b> and <b>21m pedestrians</b> had been recorded going past all counters.
-Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. Walking, overall, however continued to rise in 2021. But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then fell again in Aug, rising only slightly in Sep.
+Focusing on the NMF counters, at end `r format(end_date, "%b %Y") ` approximately <b>`r nmf_count_summaries["bicycle"] ` bikes</b> and <b>`r nmf_count_summaries["pedestrian"] ` pedestrians</b> had been recorded going past all counters.
+Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. Walking, overall, however continued to rise in 2021. But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then started to fall again in Aug. Walking rose in Sep before starting to fall again in Oct.
 </p>
+<p>&nbsp;<br />
+
 <p>
 The data now also includes council-managed counters. However, the much larger number of counters and denser network in the two largest cities, Edinburgh and Glasgow, skew the data, especially when looking at totals. We therefore compare data across location and time using predominantly average counts.
 </p>
