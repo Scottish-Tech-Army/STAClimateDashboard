@@ -95,8 +95,8 @@ Row {.tabset .tabset-fade}
 ```{=html}
 <p>&nbsp;<br />
 Focusing on the NMF counters, at end `r format(end_date, "%b %Y") ` approximately <b>`r nmf_count_summaries["bicycle"] ` bikes</b> and <b>`r nmf_count_summaries["pedestrian"] ` pedestrians</b> had been recorded going past all counters.
-Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. This may be weather-related; icy weather at the start of 2021 and unusually cold weather and even snow in May saw very low counts, while higher counts were seen over the warmer summer months than were recorded in 2020.
- Walking, overall, continued to rise in 2021. But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then started to fall again in Aug. Walking rose in Sep before starting to fall again in Oct.
+Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling dropped overall</b>. This may be weather-related; icy weather at the start of 2021 and unusually cold weather and even snow in May saw very low counts, while higher counts were seen over the warmer summer months than were recorded in 2020.<br />
+ <b>Walking, overall, continued to rise in 2021.</b> But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then started to fall again in Aug. Walking rose in Sep before starting to fall again in Oct.
 </p>
 <p>&nbsp;<br />
 
