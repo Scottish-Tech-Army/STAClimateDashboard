@@ -28,10 +28,10 @@ parseCounterDataFromDB <-
     function(counterData, glimpseContent = FALSE) {
                 
         counterData <- counterData %>%
-            mutate_at(c("siteID", "site", "Location", "countInterval", "traffic_mode", "Provider"), as.factor) %>%
-            relocate(Latitude, .before = Longitude) %>%  # correction to order, will have no impact if not needed 
+            mutate_at(vars(siteID, site, Location, countInterval, traffic_mode, Provider), as.factor) %>%
+            relocate(Latitude, .before = Longitude) %>%  # correction to order, will have no impact if not needed
             relocate(Provider, .before = siteID) %>%
-            mutate_at(c("fromDate", "toDate"), as_datetime) %>%
+            mutate_at(vars(fromDate, toDate), as_datetime) %>%
             
             mutate(date = as_date(map_chr(str_split(localTimestamp, "T"), 1))) %>%
             mutate(time = format(map_chr(str_split(localTimestamp, "T"), 2), format = "%H:%M:S"),
@@ -80,8 +80,8 @@ loadAndParseCounterData <-
                        year = year(date), 
                        Provider = provider) %>%
 
-                mutate_at(vars("count"), as.integer) %>%
-                mutate_at(vars("weekday", "month", "year"), as.factor) %>%
+                mutate_at(vars(count), as.integer) %>%
+                mutate_at(vars(weekday, month, year), as.factor) %>%
                 mutate(isWeekEnd = (as.integer(weekday) %in% c(1, 7))) %>% #between(as.integer(weekday), 6, 7)) %>%
                 relocate(isWeekEnd, .after = "weekday") %>%
 
@@ -117,8 +117,8 @@ getMetadata <-
         }
 
         metadata <- metadata %>%
-            mutate_at(vars("site", "siteID", "traffic_mode"), as.factor) %>%
-            select(-c("month", "year"))
+            mutate_at(vars(site, siteID, traffic_mode), as.factor) %>%
+            select(-c(month, year))
 
 
         metadata 
@@ -209,7 +209,7 @@ getMetadataFromJson <-
                    toDate = parse_date_time(str_pad(toDate, 8, "left", 0), "%d%m%Y")) %>%
             rename(traffic_mode = vehicleClass) %>%
             mutate_at(vars(traffic_mode), ~ tolower(.))  %>%
-            mutate_at(c("siteID", "countInterval", "traffic_mode", "trafficDirection", "laneId"), as.factor) 
+            mutate_at(vars(siteID, countInterval, traffic_mode, trafficDirection, laneId), as.factor)
         
         metadata 
     }     
@@ -257,7 +257,7 @@ parseMeteoData <-
 
 
 loadAndParseTrafficSurveyData <-
-    function(pathTofile, localAuthorityData, countInterval = "quarter_hour", selectColumns = NULL, glimpseContent = FALSE) {
+    function(pathTofile, localAuthorityData, countInterval = "quarter_hour", breakDownDates = FALSE, selectColumns = NULL, glimpseContent = FALSE) {
         
         print(paste0("Parsing file '", pathTofile, "' ..."))
         
@@ -266,7 +266,7 @@ loadAndParseTrafficSurveyData <-
                             filter(rowSums(is.na(.)) != ncol(.))
         
         data_loaded <- data_loaded %>%
-                            mutate_at(c("Code"), ~ str_remove(., "Site\\s+")) %>%
+                            mutate_at(vars(Code), ~ str_remove(., "Site\\s+")) %>%
                             #rename_with(., ~ (gsub("/|_|\\s+", "", .x)))
                             rename_with(., ~ (gsub("[^a-zA-Z]", "", .x))) #more general
         
@@ -337,7 +337,22 @@ loadAndParseTrafficSurveyData <-
                 mutate(countInterval = countInterval)
         }
 
-            
+
+        if (breakDownDates) {
+            data_loaded <- data_loaded %>%
+
+                mutate(hour = as.ordered(hour(as_datetime(map_chr(str_split(TimePeriod, "\\s*-\\s"), 1), format = "%H:%M"))),                       
+                       year = as.ordered(year(Date)),
+                       month = month(Date, label = TRUE),
+                       weekday = wday(Date, label = TRUE),
+                       isWeekEnd = (as.integer(weekday) %in% c(1, 7)), #between(as.integer(weekday), 6, 7)) %>%
+                      ) %>%
+
+                relocate(c(hour, year, month, weekday, isWeekEnd), .after = EndDateTime)
+        }
+
+
+        
         params_as_factor <- c("Code", "LocalAuthority", "Location", "RoadName", "Context", "Direction", "Side",
                               "CountPeriod", "TimePeriod", "countInterval", "TransportationMode")
         params_as_count <- c("ID", transportation_modes)
@@ -357,7 +372,7 @@ loadAndParseTrafficSurveyData <-
         
                 mutate(Latitude = NA,
                        Longitude = NA) %>%
-                mutate_at(c("Latitude", "Longitude"), as.double)
+                mutate_at(vars(Latitude, Longitude), as.double)
   
         
         if (!is_null(selectColumns))
@@ -370,56 +385,3 @@ loadAndParseTrafficSurveyData <-
         
         invisible(data_loaded)
     }
-
-
-#  adapted from https://maxcandocia.com/article/2020/Aug/30/log-scale-zero-and-negative-values/
-# to deal with log transform of values beween 0 and 1 - the log transform to negative is not useful here
-
-log_linear_transform <-
-    function(x) case_when(x < -1 ~ -log10(abs(x)) - 1,
-                          x > 1 ~ log10(x) + 1,
-                          TRUE ~ x
-                         )
-
-log_linear_transform_inverse <-
-    function(x) case_when(x < -1 ~ -10 ^(abs(x + 1)),
-                          x > 1 ~ 10 ^(x - 1),
-                          TRUE ~ x
-                         )
-
-
-log_linear_scale_transform = trans_new(
-    
-    'LogLinearTransform',
-    transform = log_linear_transform,
-    inverse = log_linear_transform_inverse,
-
-    breaks = function(x) {
-        x = x[is.finite(x)]
-
-        getRange = range(x)
-
-        if (getRange[1] < -1)
-            min_val = -ceiling(log10(abs(getRange[1]) + 1)) - 1
-        else if (getRange[1] < 0)
-            min_val = -1
-        else if (getRange[1] < 1)
-            min_val = 0
-        else
-            min_val = ceiling(log10(getRange[1])-1) - 1
-
-        if (getRange[2] > 1)
-            max_val = floor(log10(abs(getRange[2]) + 1)) + 1
-        else if (getRange[2] > 0)
-            max_val = 1
-        else if (getRange[2] > -1)
-            max_val = 0
-        else
-            max_val = -floor(log10(abs(getRange[1])) - 1) + 1
-
-        breaks = log_linear_transform_inverse(as.numeric(seq.int(min_val, max_val)))
-        return(breaks)
-
-    } # end definition of breaks
-)
-
