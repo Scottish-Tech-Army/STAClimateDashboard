@@ -1,4 +1,5 @@
-   yyyy  mm   tmax_degC    tmin_degC      af_days    rain_mm     sun_hours
+   yyyy  mm   tmax    tmin      af    rain     sun
+              degC    degC    days      mm   hours
    1930  12    7.0     3.6       0   122.4    13.1
    1931   1    4.9     0.2      13   108.0    29.7
    1931   2    4.4    -0.3      12   138.3    52.6
@@ -1089,3 +1090,4 @@
    2021   7   15.2    11.4       0    25.2    56.7#  Provisional
    2021   8   14.7    10.7       0    59.6    64.2#  Provisional
    2021   9   14.1    10.2       0    82.8    47.7#  Provisional
+   2021  10   11.4     7.0       0   144.8    62.7#  Provisional
