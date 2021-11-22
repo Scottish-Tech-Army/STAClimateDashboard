@@ -251,7 +251,7 @@ simp_chart_plot("Residential")
 
 ```
 
-### [Transport](sta-climate-change_cycling)
+### [Transport](sta-climate-change_cycling.html)
 
 ```{r}
 # Show only Transport Emissions
