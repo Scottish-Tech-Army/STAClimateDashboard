@@ -1,7 +1,7 @@
 
 ## ---- bicycle_counts --------
 
-label_all_providers <- "All Bicycle Counters" #Data Providers"
+label_all_bicycle_providers <- "All Bicycle Counters" #Data Providers"
 
 filtered_data <- padding_cycle_counter_data_from_2017 %>%
     full_join(as.data.frame(levels(cycle_counter_data_from_2017$Provider)),
@@ -21,7 +21,7 @@ filtered_data <- padding_cycle_counter_data_from_2017 %>%
              
         bind_rows(cycle_counter_data_from_2017 %>%
                     filter(traffic_mode == "bicycle") %>%
-                    mutate(Provider = label_all_providers) %>%
+                    mutate(Provider = label_all_bicycle_providers) %>%
                     group_by(Provider, traffic_mode, year, month) %>%
                     summarise(average = mean(count, na.rm = TRUE), 
                               count = sum(count, na.rm = TRUE)
@@ -34,8 +34,8 @@ filtered_data <- padding_cycle_counter_data_from_2017 %>%
         relocate(monthOfYear, .after = month) %>%
         mutate_at(vars(year), as.ordered) %>%
         mutate_at(vars(Provider, traffic_mode), as.factor) %>%
-        mutate_at(vars(Provider), ~ fct_relevel(., label_all_providers)) %>%
-        mutate_at(vars(Provider), ~ fct_relevel(., c("John Muir Way", default_provider), after = Inf)) %>%
+        mutate_at(vars(Provider), ~ fct_relevel(., c(label_all_bicycle_providers, default_provider))) %>%
+        mutate_at(vars(Provider), ~ fct_relevel(., "John Muir Way", after = Inf)) %>%
         mutate(pseudo_point = if_else(is.na(average), 0, 1),
                tooltip = if_else((pseudo_point == 0), 
                                  "", 
@@ -62,7 +62,7 @@ for (i in seq_along(providers)) {
                               x = ~ month, 
                               y = ~ count, 
                               text = ~ tooltip, 
-                              visible = (providers[i] == label_all_providers), 
+                              visible = (providers[i] == label_all_bicycle_providers), 
                               name = years[j], 
 
                               type = "scatter",
@@ -92,7 +92,7 @@ plot_tmp %>%
         
            annotations = list(x = -0.075, y = -0.25, text = "<b>Select Data Provider</b>", font = list(size = 14), 
                               yref = "paper", xref = "paper", xanchor = "left", yanchor = "bottom", showarrow = FALSE),
-           updatemenus = list(list(active = (which(str_detect(providers, fixed(label_all_providers, TRUE))) - 1), 
+           updatemenus = list(list(active = (which(str_detect(providers, fixed(label_all_bicycle_providers, TRUE))) - 1), 
                                    x = 0.72, y = -0.15, direction = "up",
                                    buttons = steps
                                 )) # end dropdown
@@ -100,7 +100,7 @@ plot_tmp %>%
     config(displayModeBar = FALSE) 
 
 
-rm(label_all_providers)
+rm(label_all_bicycle_providers)
 
 
 
