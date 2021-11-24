@@ -5,6 +5,8 @@ output:
     orientation: rows
     theme: bootstrap
     logo: sta_main_logo.png
+    includes:
+       in_header: GA_Script.html
 ---
 
 ```{r setup, include=FALSE}
@@ -318,6 +320,5 @@ The data comes from an Officail Statistics Publication for Scotland. The full re
 <p>
 Total greenhouse gasses are the sum total of the emissions from the following: CH, CO2, HFCs, N2O, NF3, PFCs, SF6. The unit used for emissions is megatonnes of CO2, or equivalent in terms of their global warming potential for other GHGs (as calculated by IPCC described further here. Only greenhouse gas emitters have been included in this visualisation - carbon sinks in land use and forestry are not displayed.
 </p>
-
 
 ```
