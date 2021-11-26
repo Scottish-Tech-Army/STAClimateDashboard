@@ -118,9 +118,9 @@ writeToDataStore <-
                                     as.integer
         
         
-        if (!table_exists) 
-            dbCreateTable(dbConnection, dbTable, dataLoaded)
-        else 
+        #if (!table_exists)
+        #    dbCreateTable(dbConnection, dbTable, dataLoaded) # sometimes fails for no obvious reason ...
+        #else
             dbWriteTable(dbConnection, dbTable, dataLoaded, append = !overwriteDataStore, overwrite = overwriteDataStore)
         
         

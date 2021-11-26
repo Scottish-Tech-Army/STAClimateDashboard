@@ -8,6 +8,7 @@ label_all_bicycle_providers <- "All Bicycle Counters" #Data Providers"
 default_provider <- "National Monitoring Framework (CS)"
 
 transportation_modes <- c("Car", "Taxi", "LGV", "HGV", "ServiceBus", "Coach", "MCycle", "Cyclist", "Pedestrian")
+traffic_direction_variables <- c("Context", "Direction", "Side", "Easting", "Northing")
 
 
 cop_cycling_theme <- 
@@ -215,8 +216,8 @@ getMetadataFromJson <-
     }     
 
 
-parseMeteoData <-
-    function(dataFile, metric, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
+loadAndParseMeteoData <-
+    function(dataFile, region, metric, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
     
         historical_weather <- read_table(dataFile) %>%
                                 filter(rowSums(is.na(.)) != ncol(.))
@@ -229,12 +230,19 @@ parseMeteoData <-
             rename_if(is.double, str_to_title) %>%
 
             pivot_longer(!year, names_to = "month", values_to = metric) %>%
-            mutate(month = ordered(month, levels = month.abb))
+            mutate(month = ordered(month, levels = month.abb)) %>%
+ 
+            pivot_longer(!c(year, month), names_to = "metric", values_to = "value")  %>%
+            separate(metric, c("statistic", "metric"), sep = "_", fill = "left") %>%
+            relocate(metric, .before = statistic)
  
         
         historical_weather <- historical_weather %>%
             mutate(monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
-            relocate(monthOfYear, .after = month)
+            
+            mutate(region = region) %>%
+            mutate_at(vars(region, metric, statistic), as.factor) %>%
+            relocate(c(monthOfYear, region), .after = month)
         
         # assumes start <= end
         if (!is.null(startDateFilter)) {
@@ -251,8 +259,88 @@ parseMeteoData <-
             glimpse(historical_weather)
         
         invisible(historical_weather)
+}
+
+
+loadAndParseMeteoStationData <-
+    function(dataFile, region, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
+    
+        historical_weather <- read_table(dataFile) %>%
+                                filter(rowSums(is.na(.)) != ncol(.))
+        
+        historical_weather <- historical_weather %>%
+
+            rename_with(~ c("year", "month", "max_temp", "min_temp", "af", "rainfall", "sunshine")) %>%
+            mutate_if(negate(is.numeric), parse_number) %>%
+
+            filter(year >= year(startDateFilter))%>%
+            mutate_at(vars(year), as.ordered) %>%
+
+            mutate_at(vars(month), ~ month(., label = TRUE)) %>%
+
+            pivot_longer(!c(year, month), names_to = "metric", values_to = "value")  %>%
+            separate(metric, c("statistic", "metric"), sep = "_", fill = "left") %>%
+            relocate(metric, .before = statistic) %>%
+
+            mutate(monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
+            filter(monthOfYear %within% interval(startDateFilter, endDateFilter)) %>%
+            
+            mutate(region = region) %>%
+            mutate_at(vars(region, metric, statistic), as.factor) %>%
+            relocate(c(monthOfYear, region), .after = month)
+
+        
+        # assumes start <= end
+        if (!is.null(startDateFilter)) {
+            historical_weather <- historical_weather %>%
+                filter(monthOfYear >= startDateFilter)
+        }
+        if (!is.null(endDateFilter)) {
+            historical_weather <- historical_weather %>%
+                filter(monthOfYear <= endDateFilter)
+        }
+
+        
+        if (glimpseContent)
+            glimpse(historical_weather)
+        
+        invisible(historical_weather)
+    }
+
+
+parseMeteoDataFromDB <-
+    function(historicalWeatherData, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
+    
+        historicalWeatherData <- historicalWeatherData %>%
+            mutate_at(vars(year), as.integer) %>%
+            mutate_at(vars(year), as.ordered) %>%
+            mutate(month = ordered(month, levels = month.abb)) %>%
+        
+            mutate_at(vars(region, metric, statistic), as.factor)
+ 
+        
+        historicalWeatherData <- historicalWeatherData %>%
+            mutate(monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
+            relocate(monthOfYear, .after = month)
+        
+        # assumes start <= end
+        if (!is.null(startDateFilter)) {
+            historicalWeatherData <- historicalWeatherData %>%
+                filter(monthOfYear >= startDateFilter)
+        }
+        if (!is.null(endDateFilter)) {
+            historicalWeatherData <- historicalWeatherData %>%
+                filter(monthOfYear <= endDateFilter)
+        }
+
+        
+        if (glimpseContent)
+            glimpse(historicalWeatherData)
+        
+        invisible(historicalWeatherData)
 
 }
+
 
 
 
@@ -336,12 +424,19 @@ loadAndParseTrafficSurveyData <-
             data_loaded <- data_loaded %>%
                 mutate(countInterval = countInterval)
         }
+        
+        
+        data_loaded <- data_loaded %>%
+            mutate(CountPeriodAsDate = parse_datetime(as.character(CountPeriod), format = "%b-%Y")) %>%
+            mutate(CountPeriod = fct_reorder(CountPeriod, CountPeriodAsDate)) %>%
+            select(-CountPeriodAsDate)
+
 
 
         if (breakDownDates) {
             data_loaded <- data_loaded %>%
 
-                mutate(hour = as.ordered(hour(as_datetime(map_chr(str_split(TimePeriod, "\\s*-\\s"), 1), format = "%H:%M"))),                       
+                mutate(hour = as.ordered(hour(as_datetime(map_chr(str_split(TimePeriod, "\\s*-\\s"), 1), format = "%H:%M"))),
                        year = as.ordered(year(Date)),
                        month = month(Date, label = TRUE),
                        weekday = wday(Date, label = TRUE),
@@ -385,3 +480,42 @@ loadAndParseTrafficSurveyData <-
         
         invisible(data_loaded)
     }
+
+
+
+parseTrafficSurveyDataFromDB <-
+    function(trafficSurveyData, breakDownDates = FALSE, glimpseContent = FALSE) {
+                
+        trafficSurveyData <- trafficSurveyData %>%
+            select(- (any_of(traffic_direction_variables) & where(~ sum(is.na(.)) == nrow(trafficSurveyData)))) %>%
+            mutate_at(vars(CountPeriod, Code, LocalAuthority, Location, RoadName, RoadNumber, RoadType, TimePeriod, countInterval, TransportationMode), as.factor) %>%
+            mutate_at(vars(Date), as_date) %>%
+            mutate_at(vars(StartDateTime, EndDateTime), as_datetime)
+        
+        trafficSurveyData <- trafficSurveyData %>%
+            mutate(CountPeriodAsDate = parse_datetime(as.character(CountPeriod), format = "%b-%Y")) %>%
+            mutate(CountPeriod = fct_reorder(CountPeriod, CountPeriodAsDate)) %>%
+            select(-CountPeriodAsDate)
+
+        
+        if (breakDownDates) {
+            trafficSurveyData <- trafficSurveyData %>%
+
+                mutate(hour = as.ordered(hour(as_datetime(map_chr(str_split(TimePeriod, "\\s*-\\s"), 1), format = "%H:%M"))),
+                       year = as.ordered(year(Date)),
+                       month = month(Date, label = TRUE),
+                       weekday = wday(Date, label = TRUE),
+                       isWeekEnd = (as.integer(weekday) %in% c(1, 7)), #between(as.integer(weekday), 6, 7)) %>%
+                      ) %>%
+
+                # mutate_at(vars(, as.ordered)) %>%
+                relocate(c(hour, year, month, weekday, isWeekEnd), .after = EndDateTime)
+        }
+        
+
+        if (glimpseContent)
+            glimpse(trafficSurveyData)
+        
+        invisible(trafficSurveyData)
+    }
+

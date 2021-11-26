@@ -23,7 +23,6 @@ gender_colour_scheme <- c("female" = as.character(colour("bright")(7)["purple"])
                           "male" = as.character(colour("bright")(7)["green"]))
 gender_shape_icons <- c("female" = -0x2640L, "male" = -0x2642L) # \u2640 and \u2642 )
 
-weather_metrics <- c("min_temp", "mean_temp", "max_temp", "rainfall")
 weather_metrics_colour_scheme <- c("min_temp" = as.character(colour("high contrast")(3)["blue"]),
                                    "mean_temp" = as.character(colour("high contrast")(3)["yellow"]),
                                    "max_temp" = as.character(colour("high contrast")(3)["red"]),
