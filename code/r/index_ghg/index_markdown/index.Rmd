@@ -1,4 +1,6 @@
 ---
+includes:
+    in_header: GA_Script.html
 title: Scottish Tech Army Climate Dashboard
 output: 
   flexdashboard::flex_dashboard:
