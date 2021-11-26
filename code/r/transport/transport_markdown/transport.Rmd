@@ -26,7 +26,7 @@ scot_ghg <- read_csv(here("data/scottish-ghg-dataset-2019.csv")) %>%
   select(-starts_with("x")) %>%
 
   # remove the base year line
-  filter(emission_year != "BaseYear", ghg_emissions_mt_co2e > 0) %>%
+  filter(emission_year != "BaseYear", sg_categories == "Transport", ghg_emissions_mt_co2e > 0) %>%
   rename(year = emission_year, 
          emissions = ghg_emissions_mt_co2e) %>%
   mutate(year = as.numeric(year)) %>%
@@ -38,9 +38,7 @@ scot_ghg <- read_csv(here("data/scottish-ghg-dataset-2019.csv")) %>%
 scot_ghg_clean <- scot_ghg %>%
   # separate categories
   separate(col = "source_name", into = c("source_name", "source_sub_cat"), sep = " - ") %>% 
-  #structure data for sunburst
   mutate(source_sub_cat = to_sentence_case(source_sub_cat),
-         inner_circle = "GHG",
         # clean categories
          source_sub_cat = str_replace_all(source_sub_cat, "[Hh]gv", "HGV"),
          source_sub_cat = str_replace_all(source_sub_cat, "Lg vs", "LGVs"),
@@ -48,18 +46,7 @@ scot_ghg_clean <- scot_ghg %>%
          sg_categories = recode(sg_categories, 
                                    "Transport (excluding international aviation and shipping)" = "Domestic\nTransport",
                                    "Agriculture and Related Land Use" = "Agriculture",
-                                   "Business and Industrial Process" = "Business\n&\nIndustry")) %>%
-  group_by(source_name) %>%
-  # amalgamate sources which only have one sub category into one, to limit the number of off shoots on sunburst
-  mutate(
-    source_sub_cat = case_when(
-    n_distinct(source_sub_cat) == 1 ~ NA_character_,
-    TRUE ~ source_sub_cat
-    ),
-    #wrap names for better formatting
-    source_name = str_wrap(source_name, 14),
-    source_sub_cat = str_wrap(source_sub_cat, 14)
-    )
+                                   "Business and Industrial Process" = "Business\n&\nIndustry"))
 ```
 ```{r identify last year and GHG choice}
 #first bit
@@ -74,53 +61,24 @@ Row
 
 # Calculate total greenhouse gas emissions per source per year
 ghg_source_total <- scot_ghg_clean %>%
-  filter(sg_categories == "Transport") %>%
   group_by(year, source_name) %>%
-  summarise(total_emissions = sum(emissions))
+  summarise(total_emissions = sum(emissions)) %>%
+  arrange(year, total_emissions) %>%
+  mutate(source_name = fct_reorder(source_name, total_emissions))
 
-# Order the sectors by greatest decrease in emissions
-ghg_source_total_plot <- ghg_source_total %>%
-  group_by(source_name) %>%
-  arrange(year) %>%
-  mutate(emission_drop = last(total_emissions) - first(total_emissions),
-         emission_drop = replace_na(emission_drop, 0)) %>%
-   ungroup() %>%
-  mutate(source_name = fct_reorder(source_name, emission_drop))
-
-colors <- viridis(10, direction = -1, end = 0.9)
-
-#create list of sources with colors ordered by last year emissions
-Source_list <- ghg_source_total_plot %>%
-  arrange(year) %>%
-  filter(year == last_year) %>%
-  select(source_name, total_emissions, emission_drop) %>%
-  arrange (desc(total_emissions))
-
-# Label positionings for the stacked area plot
-ghg_source_subs <- ghg_source_total_plot %>%
-  filter(year == 1995) %>%
-  ungroup() %>%
-  arrange(desc(source_name)) %>%
-  mutate(cum = cumsum(total_emissions),
-         gap = cum - lag(cum),
-         gap = coalesce(gap, 0.5),
-         position = cum - (gap/2))
+colors <- viridis(12, direction = 1, end = 0.9)
 
 #stacked area plot
-  ghg_source_total_plot %>%
+  ghg_source_total %>%
   ggplot() +
   aes(x = year, y = total_emissions, group = source_name, fill = source_name) +
   geom_area() +
+  scale_fill_manual(values = colors)+
   theme_light() +
-  scale_x_continuous(breaks = seq(first(ghg_source_total_plot$year),
-                                  last(ghg_source_total_plot$year), 2)) +
-        geom_text(data = ghg_source_subs,
-          aes(x = 1995, y = position,
-              label = source_name),
-          colour = "black",
-          hjust = 0) +
+  scale_x_continuous(breaks = seq(first(ghg_source_total$year),
+                                  last(ghg_source_total$year), 2)) +
   # labels
-    theme(legend.position = "none",
+    theme(legend.position = "right",
          panel.grid = element_blank(),
          axis.text = element_text(face = "bold")) +
    labs(x = "Year",

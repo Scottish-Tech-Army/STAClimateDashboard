@@ -128,6 +128,10 @@ cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
     )
 
 
+historical_weather_scotland_from_2017 <- dbGetQuery(dbConn,
+                                                    "SELECT * FROM historical_weather_scotland_from_2017")
+historical_weather_scotland_from_2017 <- parseMeteoDataFromDB(historical_weather_scotland_from_2017)
+
 dbDisconnect(dbConn)
 
 

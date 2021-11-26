@@ -1,4 +1,5 @@
 library(tidyverse)
+library(scales)
 
 library(DBI)
 
@@ -28,6 +29,60 @@ formatNumber <-
         return(value)
     }
 formatNumber <- Vectorize(formatNumber)
+
+
+
+#  adapted from https://maxcandocia.com/article/2020/Aug/30/log-scale-zero-and-negative-values/
+# to deal with log transform of values beween 0 and 1 - the log transform to negative is not useful here
+
+log_linear_transform <-
+    function(x) case_when(x < -1 ~ -log10(abs(x)) - 1,
+                          x > 1 ~ log10(x) + 1,
+                          TRUE ~ x
+                         )
+
+log_linear_transform_inverse <-
+    function(x) case_when(x < -1 ~ -10 ^(abs(x + 1)),
+                          x > 1 ~ 10 ^(x - 1),
+                          TRUE ~ x
+                         )
+
+
+log_linear_scale_transform = trans_new(
+    
+    'LogLinearTransform',
+    transform = log_linear_transform,
+    inverse = log_linear_transform_inverse,
+
+    breaks = function(x) {
+        x = x[is.finite(x)]
+
+        getRange = range(x)
+
+        if (getRange[1] < -1)
+            min_val = -ceiling(log10(abs(getRange[1]) + 1)) - 1
+        else if (getRange[1] < 0)
+            min_val = -1
+        else if (getRange[1] < 1)
+            min_val = 0
+        else
+            min_val = ceiling(log10(getRange[1])-1) - 1
+
+        if (getRange[2] > 1)
+            max_val = floor(log10(abs(getRange[2]) + 1)) + 1
+        else if (getRange[2] > 0)
+            max_val = 1
+        else if (getRange[2] > -1)
+            max_val = 0
+        else
+            max_val = -floor(log10(abs(getRange[1])) - 1) + 1
+
+        breaks = log_linear_transform_inverse(as.numeric(seq.int(min_val, max_val)))
+        return(breaks)
+
+    } # end definition of breaks
+)
+
 
 
 # shared legends
@@ -63,9 +118,9 @@ writeToDataStore <-
                                     as.integer
         
         
-        if (!table_exists) 
-            dbCreateTable(dbConnection, dbTable, dataLoaded)
-        else 
+        #if (!table_exists)
+        #    dbCreateTable(dbConnection, dbTable, dataLoaded) # sometimes fails for no obvious reason ...
+        #else
             dbWriteTable(dbConnection, dbTable, dataLoaded, append = !overwriteDataStore, overwrite = overwriteDataStore)
         
         

@@ -1158,37 +1158,40 @@ rm(filtered_data)
 
 ## ---- historical_weather_scotland_temp --------
 
+
 plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 
-plot_tmp <- add_lines(plot_tmp, 
+plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
-                                select(-rainfall) %>%
-                                pivot_longer((ends_with("_temp") | starts_with("rain")), names_to = "weather_metric", values_to = "value")  %>%
-                                
-                                left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
-                                              rownames_to_column(var = "weather_metric")) %>%
-                                mutate_at(vars(weather_metric, colour_scheme), as.factor) %>%
 
-                                mutate(tooltip = paste(paste0(str_to_title(str_remove(weather_metric, "_temp")), ":"), 
-                                                       paste0(value, "C"), 
-                                                       "-", month, year)),
+                            filter(region == "Scotland") %>%
+                            filter(metric == "temp") %>%
+
+                            left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
+                                                  rownames_to_column(var = "metric") %>%
+                                                  separate(metric, c("statistic", "metric"), sep = "_", fill = "left")) %>%
+                            mutate_at(vars(metric, colour_scheme, statistic), as.factor) %>%
+
+                            mutate(tooltip = paste(str_to_title(statistic), paste0(metric, ":"),
+                                                   paste0(value, "C"),
+                                                   "-", month, year)),
                               
-                              y = ~ value, 
-                              x = ~ monthOfYear, 
-                              text = ~ tooltip, 
+                              y = ~ value,
+                              x = ~ monthOfYear,
+                              text = ~ tooltip,
                               #width = 1,
-                              visible = TRUE, 
-                              name = ~ str_remove(weather_metric, "_temp"),
+                              visible = TRUE,
+                              name = ~ if_else(!is.na(statistic), statistic, metric), # order matters
 
                               type = "scatter",
                               mode = "lines",
                               hoverinfo = "text",
-                              color = ~ weather_metric,
+                              color = ~ paste0(if_else(is.na(statistic), "", paste0(statistic, "_")), metric),
                               colors = weather_metrics_colour_scheme,
                               showlegend = TRUE)
 
 plot_tmp %>%
-    layout(xaxis = list(title = "", tickfont = tickFont, tickangle = -45, ticks = "outside", #showgrid = FALSE, 
+    layout(xaxis = list(title = "", tickfont = tickFont, tickangle = -45, ticks = "outside", #showgrid = FALSE,
                        showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE),
           yaxis = list(title = "", tickfont = tickFont, ticks = "outside",
                        showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE, rangemode = "tozero"),
@@ -1196,41 +1199,43 @@ plot_tmp %>%
           margin = list(l = 5),
            legend = list(orientation = "h", font = list(size = 14), x = 0, y = 5)
                ) %>%
-    config(displayModeBar = FALSE)                
-        
+    config(displayModeBar = FALSE)
+
 
 
 ## ---- historical_weather_scotland_rainfall --------
 
 plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 
-plot_tmp <- add_lines(plot_tmp, 
+plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                                select(-ends_with("_temp")) %>%
-                                pivot_longer((ends_with("_temp") | starts_with("rain")), names_to = "weather_metric", values_to = "value")  %>%
+                            filter(region == "Scotland") %>%
+                            filter(metric == "rainfall") %>%
 
-                                left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
-                                              rownames_to_column(var = "weather_metric")) %>%
-                                mutate_at(vars(weather_metric, colour_scheme), as.factor) %>%
 
-                                mutate(tooltip = paste(value, "mm", "-", month, year)),
+                            left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
+                                                  rownames_to_column(var = "metric") %>%
+                                                  separate(metric, c("statistic", "metric"), sep = "_", fill = "left")) %>%
+                            mutate_at(vars(metric, colour_scheme, statistic), as.factor) %>%
 
-                              y = ~ value, 
-                              x = ~ monthOfYear, 
-                              text = ~ tooltip, 
-                              visible = TRUE, 
-                              name = ~ weather_metric, 
+                            mutate(tooltip = paste(value, "mm", "-", month, year)),
+
+                              y = ~ value,
+                              x = ~ monthOfYear,
+                              text = ~ tooltip,
+                              visible = TRUE,
+                              name = ~ if_else(!is.na(statistic), statistic, metric), # order matters
 
                               type = "scatter",
                               mode = "lines",
                               hoverinfo = "text",
-                              color = ~ weather_metric,
+                              color = ~ paste0(if_else(is.na(statistic), "", paste0(statistic, "_")), metric),
                               colors = weather_metrics_colour_scheme,
                               showlegend = TRUE)
 
 plot_tmp %>%
-    layout(xaxis = list(title = "", tickfont = tickFont, tickangle = -45, ticks = "outside", #showgrid = FALSE, 
+    layout(xaxis = list(title = "", tickfont = tickFont, tickangle = -45, ticks = "outside", #showgrid = FALSE,
                        showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE),
           yaxis = list(title = "", tickfont = tickFont, ticks = "outside",
                        showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE, rangemode = "tozero"),
@@ -1238,7 +1243,7 @@ plot_tmp %>%
           margin = list(l = 5),
            legend = list(orientation = "h", font = list(size = 14), x = 0, y = 5)
                ) %>%
-    config(displayModeBar = FALSE)               
+    config(displayModeBar = FALSE)
 
 
 
@@ -1464,38 +1469,38 @@ plot_tmp %>%
 
 plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 
-plot_tmp <- add_lines(plot_tmp, 
-                      data = historical_weather_lerwick_from_2017 %>%
-                                
-                                filter(monthOfYear %within% interval(counter_start, end_date)) %>%
-                                select(-rainfall) %>%
-                                pivot_longer((ends_with("_temp") | starts_with("rain")), names_to = "weather_metric", values_to = "value")  %>%
-                                
-                                left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
-                                              rownames_to_column(var = "weather_metric")) %>%
-                                mutate_at(vars(weather_metric, colour_scheme), as.factor) %>%
+plot_tmp <- add_lines(plot_tmp,
+                      data = historical_weather_scotland_from_2017 %>%
 
-                                mutate(tooltip = paste(paste0(str_to_title(str_remove(weather_metric, "_temp")), ":"), 
-                                                       paste0(value, "C"), 
-                                                       "-", month, year)),
+                            filter(region == "Lerwick") %>%
+                            filter(monthOfYear %within% interval(counter_start, end_date)) %>%
+                            filter(metric == "temp") %>%
+
+                            left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
+                                                  rownames_to_column(var = "metric") %>%
+                                                  separate(metric, c("statistic", "metric"), sep = "_", fill = "left")) %>%
+                            mutate_at(vars(metric, colour_scheme, statistic), as.factor) %>%
+
+                            mutate(tooltip = paste(str_to_title(statistic), paste0(metric, ":"),
+                                                   paste0(value, "C"),
+                                                   "-", month, year)),
                               
-                              y = ~ value, 
-                              x = ~ monthOfYear, 
-                              text = ~ tooltip, 
+                              y = ~ value,
+                              x = ~ monthOfYear,
+                              text = ~ tooltip,
                               #width = 1,
-                              visible = TRUE, 
-                              name = ~ str_remove(weather_metric, "_temp"),
+                              visible = TRUE,
+                              name = ~ if_else(!is.na(statistic), statistic, metric), # order matters
 
                               type = "scatter",
                               mode = "lines",
                               hoverinfo = "text",
-                              color = ~ weather_metric,
+                              color = ~ paste0(if_else(is.na(statistic), "", paste0(statistic, "_")), metric),
                               colors = weather_metrics_colour_scheme,
                               showlegend = TRUE)
 
-
 plot_tmp %>%
-    layout(xaxis = list(title = "", tickfont = tickFont, tickangle = -45, ticks = "outside", #showgrid = FALSE, 
+    layout(xaxis = list(title = "", tickfont = tickFont, tickangle = -45, ticks = "outside", #showgrid = FALSE,
                        showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE),
           yaxis = list(title = "", tickfont = tickFont, ticks = "outside",
                        showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE, rangemode = "tozero"),
@@ -1503,43 +1508,44 @@ plot_tmp %>%
           margin = list(l = 5),
            legend = list(orientation = "h", font = list(size = 14), x = 0, y = 5)
                ) %>%
-    config(displayModeBar = FALSE)                
-        
+    config(displayModeBar = FALSE)
 
 
 ## ---- historical_weather_lerwick_rainfall --------
 
 plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 
-plot_tmp <- add_lines(plot_tmp, 
-                      data = historical_weather_lerwick_from_2017 %>%
+plot_tmp <- add_lines(plot_tmp,
+                      data = historical_weather_scotland_from_2017 %>%
 
-                                filter(monthOfYear %within% interval(counter_start, end_date)) %>%
-                                select(-ends_with("_temp")) %>%
-                                pivot_longer((ends_with("_temp") | starts_with("rain")), names_to = "weather_metric", values_to = "value")  %>%
+                            filter(region == "Lerwick") %>%
+                            filter(monthOfYear %within% interval(counter_start, end_date)) %>%
+                            filter(metric == "rainfall") %>%
 
-                                left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
-                                              rownames_to_column(var = "weather_metric")) %>%
-                                mutate_at(vars(weather_metric, colour_scheme), as.factor) %>%
 
-                                mutate(tooltip = paste(value, "mm", "-", month, year)),
+                             left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
+                                                  rownames_to_column(var = "metric") %>%
+                                                  separate(metric, c("statistic", "metric"), sep = "_", fill = "left")) %>%
+                            mutate_at(vars(metric, colour_scheme, statistic), as.factor) %>%
 
-                              y = ~ value, 
-                              x = ~ monthOfYear, 
-                              text = ~ tooltip, 
-                              visible = TRUE, 
-                              name = ~ weather_metric, 
+                            mutate(tooltip = paste(value, "mm", "-", month, year)),
+
+                              y = ~ value,
+                              x = ~ monthOfYear,
+                              text = ~ tooltip,
+                              #width = 1,
+                              visible = TRUE,
+                              name = ~ if_else(!is.na(statistic), statistic, metric), # order matters
 
                               type = "scatter",
                               mode = "lines",
                               hoverinfo = "text",
-                              color = ~ weather_metric,
+                              color = ~ paste0(if_else(is.na(statistic), "", paste0(statistic, "_")), metric),
                               colors = weather_metrics_colour_scheme,
                               showlegend = TRUE)
 
-
 plot_tmp %>%
-    layout(xaxis = list(title = "", tickfont = tickFont, tickangle = -45, ticks = "outside", #showgrid = FALSE, 
+    layout(xaxis = list(title = "", tickfont = tickFont, tickangle = -45, ticks = "outside", #showgrid = FALSE,
                        showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE),
           yaxis = list(title = "", tickfont = tickFont, ticks = "outside",
                        showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE, rangemode = "tozero"),
@@ -1547,8 +1553,7 @@ plot_tmp %>%
           margin = list(l = 5),
            legend = list(orientation = "h", font = list(size = 14), x = 0, y = 5)
                ) %>%
-    config(displayModeBar = FALSE)               
-
+    config(displayModeBar = FALSE)
 
 
 ## ----  --------

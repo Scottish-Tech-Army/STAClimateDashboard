@@ -1,10 +1,14 @@
 ---
+includes:
+    in_header: GA_Script.html
 title: Scottish Tech Army Climate Dashboard
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
     theme: bootstrap
     logo: sta_main_logo.png
+    includes:
+       in_header: GA_Script.html
 ---
 
 ```{r setup, include=FALSE}
@@ -115,6 +119,8 @@ third_level <- ghg_tree %>%
 # combine all levels or heirarchy
 ghg_hierarchy <- bind_rows(parents_top, parents, second_level, third_level)
 ```
+Overview 
+=======================================================================
 
 Row
 -----------------------------------------------------------------------
@@ -190,7 +196,7 @@ ghg_subs <- ghg_sector_total_plot %>%
 ```
 
 
-### Breakdown of `r last_year` Data
+### Breakdown of `r last_year` Data - Click on a sector to expand the view
 ```{r warning = FALSE, message = FALSE, fig.height= 8, fig.width = 10}
 
 # create sunburst
@@ -251,7 +257,7 @@ simp_chart_plot("Residential")
 
 ```
 
-### Transport
+### [Transport](sta-climate-change_cycling.html)
 
 ```{r}
 # Show only Transport Emissions
@@ -298,5 +304,23 @@ simp_chart_plot("Forestry")
 ```{r}
 
 simp_chart_plot("International Aviation and Shipping")
+
+```
+
+About
+=======================================================================
+
+```{=html}
+<p>&nbsp;<br />
+<!-- A summary sheet may be downloaded &ndash; <a href="cycle_counters_info_cards.pdf">cycle_counters_info_cards.pdf</a -->
+
+<h3>About the Data</h3>
+
+<p>
+The data comes from an Officail Statistics Publication for Scotland. The full report is available via <a href="https://www.gov.scot/publications/scottish-greenhouse-gas-statistics-1990-2019/documents/">this link.</a> The report and data were published on the 15th June 2021 and cover the data up to the end of 2019.
+</p>
+<p>
+Total greenhouse gasses are the sum total of the emissions from the following: CH, CO2, HFCs, N2O, NF3, PFCs, SF6. The unit used for emissions is megatonnes of CO2, or equivalent in terms of their global warming potential for other GHGs (as calculated by IPCC described further here. Only greenhouse gas emitters have been included in this visualisation - carbon sinks in land use and forestry are not displayed.
+</p>
 
 ```
