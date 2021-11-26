@@ -9,7 +9,6 @@ output:
   flexdashboard::flex_dashboard:
     orientation: rows
     theme: bootstrap
-    logo: sta_main_logo.png
     social: menu
  #   source_code: embed
     
@@ -46,7 +45,6 @@ source("base/common_interaction.r")
 
 library(knitr)
 library(kableExtra)
-library(here)
 
 
 # utilities & c.
@@ -58,7 +56,7 @@ knitr::read_chunk("base/cycle_counters_interactive.r")
 ```{r sqa_data_extraction, cache.lazy = FALSE}
 
 #source("base/sta_climate_change_sql_extract.r", local = knitr::knit_global())
-load(here("data/cycling_datasets.Rdata"))  #interim - querying and parsing from scratch
+load("cycling_datasets.Rdata")  #interim - querying and parsing from scratch
 source("base/sta_climate_change_data_parsing.r", local = knitr::knit_global())
 ```
 
