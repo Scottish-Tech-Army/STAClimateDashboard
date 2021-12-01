@@ -3,7 +3,7 @@
 transportation_mode_plots <- lapply(overview_plot_colour_scheme$group, function(i) {
 
         summary_all_modes_survey_from_2017 %>%
-            filter(TransportationMode == levels(summary_all_modes_survey_from_2017$TransportationMode)[i]) %>%
+            filter(TransportationMode == levels(overview_plot_colour_scheme$TransportationMode)[i]) %>%
 
             ggplot(aes(CountPeriod, count, fill = TransportationMode, group = TransportationMode)) + 
                 geom_area(fill = overview_plot_colour_scheme$fill[i]) +
