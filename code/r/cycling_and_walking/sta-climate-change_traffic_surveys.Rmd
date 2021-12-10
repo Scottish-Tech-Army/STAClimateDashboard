@@ -1,0 +1,185 @@
+---
+title: "STA Climate Change &ndash; Biannual Traffic Surveys"
+output:
+#  html_document:
+#    toc: true
+#    toc_depth: 3
+#    toc_float: true
+    
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    theme: bootstrap
+    social: menu
+ #   source_code: embed
+    #self_contained: false
+    #lib_dir: libs
+---
+
+<style>
+  table {
+    border-bottom: 1px solid #333;
+  }
+</style>
+
+```{r global-options, include = FALSE, cache = FALSE}
+
+knitr::opts_chunk$set(out.width = '100%', out.height = '100%', fig.align = 'left',
+                      echo = FALSE, warning = FALSE, message = FALSE)
+
+```
+
+```{r libraries_and_utilities}
+
+source("base/common-traffic_counters.r")
+source("base/common_interaction.r")
+
+## the following libraries called in sourced base files
+#library(tidyverse)
+#library(lubridate)
+##library(ggtext)
+#library(DBI)
+
+##library(plotly)
+##library(crosstalk)
+
+library(knitr)
+library(kableExtra)
+
+
+# utilities & c.
+
+knitr::read_chunk("base/nmf_all_mode_traffic_surveys_interactive.r")
+
+```
+
+```{r sqa_data_extraction, cache.lazy = FALSE}
+
+countInterval <- "hour"
+#source("base/sta_climate_change_traffic_survey_data_sql_extract.r", local = knitr::knit_global())
+load("traffic_survey_datasets.Rdata")  #interim - querying and parsing from scratch
+source("base/sta_climate_change_traffic_survey_data_parsing.r", local = knitr::knit_global())
+
+```
+
+
+Overview 
+=======================================================================
+
+Row {data-height=45}
+-------------------------------------
+   
+### Biannual Traffic Surveys from `r format(start_date, "%b %Y") ` to `r format(end_date, "%b %Y") `.
+
+
+Column {data-height=650}
+-----------------------------------------------------------------------
+
+### All Transportation Modes {data-width=850}
+
+```{r fig.height = 8, fig.width = 15}
+
+overview_plot
+
+```
+
+### Cycling {.no-padding}
+
+```{r, sunburst_layout_bicycles}
+```
+
+
+Row {data-height=75}
+-------------------------------------
+   
+### __Traffic counts by mode. The highest counts are furthest left, decreasing to the right.__
+
+```{=html}
+
+<table width = "100%" style = "border:none; text-align:left; color:grey" >
+  <th>Motor Vehicles</th>
+  <th width = "21%">Active Travel</th>
+</table>
+
+```
+
+
+Column {data-height=250}
+-----------------------------------------------------------------------
+
+```{r, overview_traffic_surveys_subplots }
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[1]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[1]]
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[2]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[2]]
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[3]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[3]]
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[4]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[4]]
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[5]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[5]]
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[6]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[6]]
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[7]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[7]]
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[8]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[8]]
+```
+
+### `r transportation_modes[levels(overview_plot_colour_scheme$TransportationMode)[9]] ` {data-width=100}
+
+```{r, fig.height= 5}
+transportation_mode_plots[[9]]
+```
+
+
+
+About
+=======================================================================
+
+
+```{=html}
+<!-- p>&nbsp;<br />
+
+<p>
+</p -->
+
+
+<h3>Data Sources</h3>
+
+<p>
+ Data feeding into the analysis presented may be accessed via Cycling Scotland's <a href = "https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/b9fdd462-1f45-4252-aedc-fbc596abcd90" target = "_blank">Active Travel Open Data Portal</a>.
+</p>
+
+```
