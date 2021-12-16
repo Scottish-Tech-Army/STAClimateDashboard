@@ -44,7 +44,7 @@ reporting_sites <- reporting_sites %>%
     mutate(Provider = default_provider) %>%
 
     bind_rows(non_nmf_counter_metadata %>%
-                select(- c(start_date, end_date, average, count, Notes)) %>%
+                select(- c(start_date, end_date, Notes)) %>%
                 rename(externalId = siteID)
               ) %>%
     mutate_if(is.factor, as.character) %>%

@@ -125,7 +125,7 @@ The data now also includes council-managed counters. However, the much larger nu
 
 ####
 
-```{r, counters_installed, fig.height = 8, fig.width = 10}
+```{r, counters_installed, fig.height = 12, fig.width = 10}
 ```
 
 

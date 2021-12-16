@@ -245,9 +245,10 @@ loadAndParseMeteoData <-
         historical_weather <- historical_weather %>%
             mutate(monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
             
-            mutate(region = region) %>%
-            mutate_at(vars(region, metric, statistic), as.factor) %>%
-            relocate(c(monthOfYear, region), .after = month)
+            mutate(region = region,
+                   weather_station = NA) %>%
+            mutate_at(vars(region, weather_station, metric, statistic), as.factor) %>%
+            relocate(c(monthOfYear, region, weather_station), .after = month)
         
         # assumes start <= end
         if (!is.null(startDateFilter)) {
@@ -268,7 +269,7 @@ loadAndParseMeteoData <-
 
 
 loadAndParseMeteoStationData <-
-    function(dataFile, region, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
+    function(dataFile, region, weather_station, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
     
         historical_weather <- read_table(dataFile) %>%
                                 filter(rowSums(is.na(.)) != ncol(.))
@@ -290,9 +291,10 @@ loadAndParseMeteoStationData <-
             mutate(monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
             filter(monthOfYear %within% interval(startDateFilter, endDateFilter)) %>%
             
-            mutate(region = region) %>%
-            mutate_at(vars(region, metric, statistic), as.factor) %>%
-            relocate(c(monthOfYear, region), .after = month)
+            mutate(region = region,
+                   weather_station = weather_station) %>%
+            mutate_at(vars(region, weather_station, metric, statistic), as.factor) %>%
+            relocate(c(monthOfYear, region, weather_station), .after = month)
 
         
         # assumes start <= end
@@ -321,7 +323,7 @@ parseMeteoDataFromDB <-
             mutate_at(vars(year), as.ordered) %>%
             mutate(month = ordered(month, levels = month.abb)) %>%
         
-            mutate_at(vars(region, metric, statistic), as.factor)
+            mutate_at(vars(region, weather_station, metric, statistic), as.factor)
  
         
         historicalWeatherData <- historicalWeatherData %>%

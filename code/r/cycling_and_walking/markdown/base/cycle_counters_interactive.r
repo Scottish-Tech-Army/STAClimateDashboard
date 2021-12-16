@@ -838,7 +838,7 @@ plot_tmp %>%
 ## ---- average_count_by_location_and_year --------
 
 
-plot_tmp <- plot_ly(height = 680, width = 900, 
+plot_tmp <- plot_ly(height = 700, width = 900, 
                     data = count_by_location %>%
                                 mutate_at(vars(daily_average_by_siteID, count), ~replace(., . == -Inf, NA)) %>%
 
@@ -906,7 +906,7 @@ plot_tmp %>%
          yaxis = list(type = "log", tickfont = tickFont, ticks = "outside", 
                       title = list(text = "Average daily count - across counters per location", titlefont = list(size = 20)), 
                       ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE), 
-         legend = list(title = list(text = "Local Authority", font = list(size = 16)), 
+         legend = list(title = list(text = "Local Authority", font = list(size = 14)), 
                        itemsizing = "constant", #itemwidth = 30, #sizing ignored ...
                        tracegroupgap = 1), 
          margin = list(l = 5)
@@ -1004,7 +1004,7 @@ plot_tmp1 <- plot_tmp %>%
 ## ---- average_count_by_siteID_location_and_month --------
 
 
-plot_tmp <- plot_ly(height = 680, width = 900, #6=50, 750, 
+plot_tmp <- plot_ly(height = 700, width = 900, #6=50, 750, 
                     data = count_by_location %>%
 
                         filter(between(monthOfYear, start_date, end_date)) %>%
@@ -1072,7 +1072,7 @@ plot_tmp <- add_text(plot_tmp,
 
 #plot_tmp2 <- 
 plot_tmp %>%
-  layout(title = list(text = "Bicycle Count by Counter & Location", font = list(size = 22), y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
+  layout(title = list(text = "Bicycle Count by Counter & Location", font = list(size = 18), y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
          xaxis = list(type = "log", tickfont = tickFont, title = list(text = "Total monthly count", font = list(size = 15)), 
                       ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgb(175, 175, 175)", 
                       mirror = TRUE, zeroline = FALSE),
@@ -1164,7 +1164,7 @@ plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                                filter((region == "Scotland") & (metric == "temp")) %>%
+                                filter((region == "Scotland") & is.na(weather_station) & (metric == "temp")) %>%
                                 mutate(tooltip = paste(str_to_title(statistic), paste0(metric, ":"),
                                                        paste0(value, "C"),
                                                        "-", month, year)),
@@ -1203,7 +1203,7 @@ plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                                filter((region == "Scotland") & (metric == "rainfall")) %>%
+                                filter((region == "Scotland") & is.na(weather_station) & (metric == "rainfall")) %>%
                                 mutate(tooltip = paste(value, "mm", "-", month, year)),
 
                               y = ~ value,
@@ -1457,7 +1457,7 @@ plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                                filter((region == "Lerwick") & (metric == "temp")) %>%
+                                filter((region == "Scotland") & (weather_station == "Lerwick") & (metric == "temp")) %>%
                                 filter(monthOfYear %within% interval(counter_start, end_date)) %>%
 
                                 mutate(tooltip = paste(str_to_title(statistic), paste0(metric, ":"),
@@ -1497,7 +1497,7 @@ plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                                filter((region == "Lerwick") & (metric == "rainfall")) %>%
+                                filter((region == "Scotland") & (weather_station == "Lerwick") & (metric == "rainfall")) %>%
                                 filter(monthOfYear %within% interval(counter_start, end_date)) %>%
 
                                 mutate(tooltip = paste(value, "mm", "-", month, year)),

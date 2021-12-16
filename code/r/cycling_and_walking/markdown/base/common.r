@@ -32,6 +32,38 @@ formatNumber <- Vectorize(formatNumber)
 
 
 
+formatFraction <-
+    function(input) {
+        
+        if (is.na(as.numeric(input)))
+            return(NA)
+        
+        numberParts <- str_split(as.character(input), , pattern = "\\.", simplify = TRUE)
+        if (is.na(as.numeric(numberParts[2])))
+           return(numberParts[1])
+        
+        return(paste(numberParts[1],
+                     MASS::fractions(as.numeric(paste0("0.", numberParts[2])))))
+    }
+formatFraction <- Vectorize(formatFraction)
+
+
+
+# shared legends
+# adapted from https://stackoverflow.com/a/13650878
+# points to more complex https://github.com/hadley/ggplot2/wiki/Share-a-legend-between-two-ggplot2-graphs
+
+create_shared_legend <-
+    function(selected_plot){
+    
+        pseudo_plot <- ggplot_gtable(ggplot_build(selected_plot))
+        legend <- which(sapply(pseudo_plot$grobs, function(x) x$name) == "guide-box")
+        
+        return(pseudo_plot$grobs[[legend]])
+    }
+                            
+
+
 #  adapted from https://maxcandocia.com/article/2020/Aug/30/log-scale-zero-and-negative-values/
 # to deal with log transform of values beween 0 and 1 - the log transform to negative is not useful here
 
@@ -85,19 +117,15 @@ log_linear_scale_transform = trans_new(
 
 
 
-# shared legends
-# adapted from https://stackoverflow.com/a/13650878
-# points to more complex https://github.com/hadley/ggplot2/wiki/Share-a-legend-between-two-ggplot2-graphs
-
-create_shared_legend <-
-    function(selected_plot){
-    
-        pseudo_plot <- ggplot_gtable(ggplot_build(selected_plot))
-        legend <- which(sapply(pseudo_plot$grobs, function(x) x$name) == "guide-box")
-        
-        return(pseudo_plot$grobs[[legend]])
-    }
-                            
+#
+# adapted from https://www.aliciaschep.com/blog/js-rmarkdown
+# and that adapted from http://livefreeordichotomize.com/2017/01/24/custom-javascript-visualizations-in-rmarkdown
+#
+r_dataframe_to_js <- function(x, var_name = "data", ...) {
+  
+  json_data <- jsonlite::toJSON(x, ...)
+  htmltools::tags$script(paste0("var ",var_name," = ", json_data, ";"))
+}
 
 
 # updated with newer function calls
