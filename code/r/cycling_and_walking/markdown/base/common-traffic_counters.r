@@ -7,7 +7,12 @@ source("base/common.r")
 label_all_bicycle_providers <- "All Bicycle Counters" #Data Providers"
 default_provider <- "National Monitoring Framework (CS)"
 
-transportation_modes <- c("Car", "Taxi", "LGV", "HGV", "ServiceBus", "Coach", "MCycle", "Cyclist", "Pedestrian")
+transportation_modes <- c("Car" = "Car", "Taxi" = "Taxi", "LGV" = "LGV", "HGV" = "HGV", "ServiceBus" = "Service Bus", "Coach" = "Coach", "MCycle" = "Motorcycle", "Cyclist" = "Bicycle", "Pedestrian" = "Pedestrian")
+
+transportation_types <- c("MotorVehicle", "ActiveTravel")
+transportation_type <- c("Car" = "MotorVehicle", "Taxi" = "MotorVehicle", "LGV" = "MotorVehicle", "HGV" = "MotorVehicle", "ServiceBus" = "MotorVehicle", "Coach" = "MotorVehicle", "MCycle" = "MotorVehicle", "Cyclist" = "ActiveTravel", "Pedestrian" = "ActiveTravel")
+
+
 traffic_direction_variables <- c("Context", "Direction", "Side", "Easting", "Northing")
 
 

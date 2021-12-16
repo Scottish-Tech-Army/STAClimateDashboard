@@ -1,14 +1,15 @@
 ---
-includes:
-    in_header: GA_Script.html
 title: Scottish Tech Army Climate Dashboard
 output: 
   flexdashboard::flex_dashboard:
-    orientation: rows
-    theme: bootstrap
-    logo: sta_main_logo.png
     includes:
        in_header: GA_Script.html
+    theme: bootstrap
+    logo: sta_main_logo.png
+    orientation: rows
+    social: menu
+    self_contained: false
+    #lib_dir: libs
 ---
 
 ```{r setup, include=FALSE}

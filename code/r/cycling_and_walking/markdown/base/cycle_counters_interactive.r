@@ -1164,17 +1164,10 @@ plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                            filter(region == "Scotland") %>%
-                            filter(metric == "temp") %>%
-
-                            left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
-                                                  rownames_to_column(var = "metric") %>%
-                                                  separate(metric, c("statistic", "metric"), sep = "_", fill = "left")) %>%
-                            mutate_at(vars(metric, colour_scheme, statistic), as.factor) %>%
-
-                            mutate(tooltip = paste(str_to_title(statistic), paste0(metric, ":"),
-                                                   paste0(value, "C"),
-                                                   "-", month, year)),
+                                filter((region == "Scotland") & (metric == "temp")) %>%
+                                mutate(tooltip = paste(str_to_title(statistic), paste0(metric, ":"),
+                                                       paste0(value, "C"),
+                                                       "-", month, year)),
                               
                               y = ~ value,
                               x = ~ monthOfYear,
@@ -1210,16 +1203,8 @@ plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                            filter(region == "Scotland") %>%
-                            filter(metric == "rainfall") %>%
-
-
-                            left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
-                                                  rownames_to_column(var = "metric") %>%
-                                                  separate(metric, c("statistic", "metric"), sep = "_", fill = "left")) %>%
-                            mutate_at(vars(metric, colour_scheme, statistic), as.factor) %>%
-
-                            mutate(tooltip = paste(value, "mm", "-", month, year)),
+                                filter((region == "Scotland") & (metric == "rainfall")) %>%
+                                mutate(tooltip = paste(value, "mm", "-", month, year)),
 
                               y = ~ value,
                               x = ~ monthOfYear,
@@ -1472,18 +1457,12 @@ plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                            filter(region == "Lerwick") %>%
-                            filter(monthOfYear %within% interval(counter_start, end_date)) %>%
-                            filter(metric == "temp") %>%
+                                filter((region == "Lerwick") & (metric == "temp")) %>%
+                                filter(monthOfYear %within% interval(counter_start, end_date)) %>%
 
-                            left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
-                                                  rownames_to_column(var = "metric") %>%
-                                                  separate(metric, c("statistic", "metric"), sep = "_", fill = "left")) %>%
-                            mutate_at(vars(metric, colour_scheme, statistic), as.factor) %>%
-
-                            mutate(tooltip = paste(str_to_title(statistic), paste0(metric, ":"),
-                                                   paste0(value, "C"),
-                                                   "-", month, year)),
+                                mutate(tooltip = paste(str_to_title(statistic), paste0(metric, ":"),
+                                                       paste0(value, "C"),
+                                                       "-", month, year)),
                               
                               y = ~ value,
                               x = ~ monthOfYear,
@@ -1518,17 +1497,10 @@ plot_tmp <- plot_ly(height = 280, width = 950, line = list(width = 0.65))
 plot_tmp <- add_lines(plot_tmp,
                       data = historical_weather_scotland_from_2017 %>%
 
-                            filter(region == "Lerwick") %>%
-                            filter(monthOfYear %within% interval(counter_start, end_date)) %>%
-                            filter(metric == "rainfall") %>%
+                                filter((region == "Lerwick") & (metric == "rainfall")) %>%
+                                filter(monthOfYear %within% interval(counter_start, end_date)) %>%
 
-
-                             left_join(data.frame(colour_scheme = weather_metrics_colour_scheme) %>%
-                                                  rownames_to_column(var = "metric") %>%
-                                                  separate(metric, c("statistic", "metric"), sep = "_", fill = "left")) %>%
-                            mutate_at(vars(metric, colour_scheme, statistic), as.factor) %>%
-
-                            mutate(tooltip = paste(value, "mm", "-", month, year)),
+                                mutate(tooltip = paste(value, "mm", "-", month, year)),
 
                               y = ~ value,
                               x = ~ monthOfYear,
