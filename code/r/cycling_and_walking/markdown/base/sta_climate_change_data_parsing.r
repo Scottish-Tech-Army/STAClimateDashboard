@@ -69,22 +69,39 @@ counter_data <- counter_data %>%
 
 # NOTE - multiple counter installations (CycleCounter) in some months -
 # if summarising further need to take distinct rows excluding this variable
+#
+# Also, Locations (names) not unique, so need to include LocalAuthority (or site) when grouping
+
+counters_reporting_data <- cycle_counter_data_from_2017 %>%
+                   distinct(siteID, site, Location, Provider) %>%
+
+    semi_join(reporting_sites %>%
+                distinct(externalId, LocalAuthority),
+               
+               by = c("siteID" = "externalId")
+              
+             ) %>%
+    distinct(siteID) %>%
+    deframe()  %>%
+    as.character()
+
 
 count_by_location <- padding_cycle_counter_data_from_2017 %>%
     distinct(year, month) %>%
 
     full_join(reporting_sites %>%
-                  distinct(LocalAuthority, Location, CycleCounter),
+                  filter(externalId %in% counters_reporting_data) %>%
+                  distinct(site, LocalAuthority, Location), #CycleCounter),
               by = character()
              ) %>%
 
     full_join(cycle_counter_data_from_2017 %>%
 
                 filter(traffic_mode == "bicycle") %>%
-                group_by(Location, year, month, date) %>%
+                group_by(site, Location, year, month, date) %>%
                 summarise(count = sum(count, na.rm = TRUE)) %>%
               
-                group_by(Location, year, month) %>%
+                group_by(site, Location, year, month) %>%
                 summarise(daily_average = mean(count, na.rm = TRUE),
                           count = sum(count, na.rm = TRUE)) %>%
 
@@ -92,13 +109,13 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
                 left_join(cycle_counter_data_from_2017 %>%
 
                             filter(traffic_mode == "bicycle") %>%
-                            group_by(siteID, Location, year, month, date) %>%
+                            group_by(siteID, site, Location, year, month, date) %>%
                             summarise(count = sum(count, na.rm = TRUE)) %>%
                           
-                            group_by(siteID, Location, year, month) %>%
+                            group_by(siteID, site, Location, year, month) %>%
                             summarise(daily_average_by_siteID = mean(count, na.rm = TRUE)) %>%
                           
-                            group_by(Location, year, month) %>%
+                            group_by(site, Location, year, month) %>%
                             summarise(daily_average_by_siteID = mean(daily_average_by_siteID),
                                       counter_count = n())
                           
@@ -129,16 +146,16 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
                 # actual values noted, will need a manual pass for reverse geocode
                 drop_na(LocalAuthority) %>%
                 #mutate_at(vars(LocalAuthority), ~replace(., is.na(.), "Not Known")) %>%
-                mutate_at(vars(LocalAuthority, Location), as.factor) %>%
+                mutate_at(vars(LocalAuthority, site, Location), as.factor) %>%
                 #mutate_at(vars(LocalAuthority), ~ fct_relevel(., "Not Known", after = Inf)) %>%
 
 
                 mutate_at(vars(year), as.ordered) %>%
                 mutate(month = factor(month, levels = month.abb)) %>%
-                mutate(pseudo_point = if_else(is.na(daily_average), 0, 1), # need this and next to generate full trace sets and legend or animation breaks
-                       tooltip = if_else((pseudo_point == 0),
+                mutate(pseudo_point = if_else(is.na(daily_average), 1, 0), # need this and next to generate full trace sets and legend or animation breaks
+                       tooltip = if_else(as.logical(pseudo_point),
                                          "",
-                                         paste(Location, "-", month, year,
+                                         paste(Location, paste0("(", LocalAuthority, ")"), "-", month, year,
                                                "\nAverage daily count:", formatNumber(round(daily_average)),
                                                paste0("(", counter_count, " counter", if_else(counter_count == 1, ")", "s)")),
                                                "\nTotal count:", formatNumber(count))),
@@ -160,8 +177,8 @@ counts_by_month <- padding_cycle_counter_data_from_2017 %>%
 
             mutate_at(vars(year, time), as.ordered) %>%
             mutate(month = factor(month, levels = month.abb)) %>%
-            mutate(pseudo_point = if_else(is.na(average), 0, 1), # need this and next to generate full trace sets and legend or animation breaks
-                   tooltip = if_else((pseudo_point == 0), 
+            mutate(pseudo_point = if_else(is.na(average), 1, 0), # need this and next to generate full trace sets and legend or animation breaks
+                   tooltip = if_else(as.logical(pseudo_point),
                                      "", 
                                      paste("Average count,", month, ",", time, "-" , round(average, 2)))
                    ) %>%
@@ -217,8 +234,8 @@ count_by_location_lerwick <- padding_cycle_counter_data_from_2017 %>%
 
                 mutate_at(vars(year), as.ordered) %>%
                 mutate(month = factor(month, levels = month.abb)) %>%
-                mutate(pseudo_point = if_else(is.na(daily_average), 0, 1), # need this and next to generate full trace sets and legend or animation breaks
-                       tooltip = if_else((pseudo_point == 0),
+                mutate(pseudo_point = if_else(is.na(daily_average), 1, 0), # need this and next to generate full trace sets and legend or animation breaks
+                       tooltip = if_else(as.logical(pseudo_point),
                                          "",
                                          paste(RoadName, "-", month, year,
                                                "\nAverage daily count:", round(daily_average, 2),
