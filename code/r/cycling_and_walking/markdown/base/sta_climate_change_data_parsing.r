@@ -73,16 +73,26 @@ counter_data <- counter_data %>%
 # Also, Locations (names) not unique, so need to include LocalAuthority (or site) when grouping
 
 counters_reporting_data <- cycle_counter_data_from_2017 %>%
-                   distinct(siteID, site, Location, Provider) %>%
+    distinct(siteID, site, Location, Provider) %>%
 
-    semi_join(reporting_sites %>%
-                distinct(externalId, LocalAuthority),
-               
-               by = c("siteID" = "externalId")
-              
-             ) %>%
-    distinct(siteID) %>%
-    deframe()  %>%
+    semi_join(reporting_sites, by = c("siteID" = "externalId")) %>%
+    distinct(siteID) %>% # reported witth externalId
+
+    bind_rows(reporting_sites %>%
+
+                semi_join(
+                    cycle_counter_data_from_2017 %>%
+                        distinct(siteID, site, Location, Provider) %>%
+
+                        anti_join(reporting_sites, by = c("siteID" = "externalId")),
+                    
+                        by = "siteID"
+
+                    ) %>%
+                distinct(siteID)
+    ) %>% # reported witth siteID
+
+    deframe() %>%
     as.character()
 
 
@@ -90,7 +100,8 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
     distinct(year, month) %>%
 
     full_join(reporting_sites %>%
-                  filter(externalId %in% counters_reporting_data) %>%
+                  filter((externalId %in% counters_reporting_data) |
+                         ((siteID %in% counters_reporting_data) & !(site %in% externalId))) %>%
                   distinct(site, LocalAuthority, Location), #CycleCounter),
               by = character()
              ) %>%
