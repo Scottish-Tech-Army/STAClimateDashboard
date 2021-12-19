@@ -76,7 +76,7 @@ counters_reporting_data <- cycle_counter_data_from_2017 %>%
     distinct(siteID, site, Location, Provider) %>%
 
     semi_join(reporting_sites, by = c("siteID" = "externalId")) %>%
-    distinct(siteID) %>% # reported witth externalId
+    distinct(siteID) %>% # reported with externalId
 
     bind_rows(reporting_sites %>%
 
