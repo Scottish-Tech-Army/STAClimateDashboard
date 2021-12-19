@@ -90,7 +90,7 @@ counters_reporting_data <- cycle_counter_data_from_2017 %>%
 
                     ) %>%
                 distinct(siteID)
-    ) %>% # reported witth siteID
+    ) %>% # reported with siteID
 
     deframe() %>%
     as.character()
