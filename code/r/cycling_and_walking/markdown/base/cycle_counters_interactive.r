@@ -1097,12 +1097,18 @@ plot_tmp %>%
 
 # adapted from https://plotly.com/r/sliders
 
-
 filtered_data <- count_by_location %>%
     filter(between(monthOfYear, start_date, end_date)) %>%
-    droplevels()
+    droplevels() %>%
+    mutate(distinct_location = paste0(Location, "-", site),  
+           location_label_site = paste0(Location, " (", site, ")"), 
+           location_label_local_authority = paste0(Location, " (", LocalAuthority, ")")) %>%
+    mutate(across(c(distinct_location, location_label_site, location_label_local_authority), as.factor)) %>%
+    arrange(LocalAuthority, Location) %>%
+    mutate(across(starts_with("location_label"), ~ fct_inorder(.))) 
 
-locations <- levels(filtered_data$Location)
+
+locations <- levels(filtered_data$distinct_location)           
 
 
 steps <- list()
@@ -1111,7 +1117,7 @@ plot_tmp <- plot_ly(height = 450, width = 950)
 for (i in seq_along(locations)) {
     
     plot_tmp <- add_lines(plot_tmp, data = filtered_data %>%
-                                            filter(Location == locations[i]),
+                                            filter(distinct_location == locations[i]),
 
                        x = ~ monthOfYear, 
                        y = ~ count, 
@@ -1119,8 +1125,8 @@ for (i in seq_along(locations)) {
                        visible = (i == 1),
                        name = locations[i],
 
-                        type = "scatter", 
-                        mode = "lines", 
+                        #type = "scatter", 
+                        mode = "lines+markers", 
                         hoverinfo = "text", 
                         #line = list(color = "00CED1"), 
                         color = ~ LocalAuthority, 
@@ -1128,9 +1134,7 @@ for (i in seq_along(locations)) {
                         showlegend = FALSE)
 
   step <- list(args = list("visible", rep(FALSE, length(locations))),
-               label = #paste0(
-                       locations[i], #", ", unique(filtered_data$LocalAuthority[filtered_data$Location == locations[i]])),              
-               method = "restyle")
+               label = unique(filtered_data$location_label_local_authority[filtered_data$distinct_location == locations[i]]),                  method = "restyle")
   step$args[[2]][i] <- TRUE  
   steps[[i]] <- step 
 }  
@@ -1146,7 +1150,7 @@ plot_tmp %>%
           #sliders = list(list(active = 0,
           #                   currentvalue = list(prefix = "City/town: "),
           #                   steps = steps))
-          updatemenus = list(list(active = 0, x = 0.185, y = 1.12,
+          updatemenus = list(list(active = 0, x = 0.385, y = 1.12,
                                   buttons = steps
                                  )) # end dropdown
     ) # end layout
