@@ -11,7 +11,8 @@ output:
     theme: bootstrap
     social: menu
  #   source_code: embed
-    
+    #self_contained: false
+    #lib_dir: libs
 ---
 
 <style>
@@ -169,16 +170,16 @@ About
 
 
 ```{=html}
-<p>&nbsp;<br />
+<!-- p>&nbsp;<br />
 
 <p>
-</p>
+</p -->
 
 
 <h3>Data Sources</h3>
 
 <p>
-
+ Data feeding into the analysis presented may be accessed via Cycling Scotland's <a href = "https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/b9fdd462-1f45-4252-aedc-fbc596abcd90" target = "_blank">Active Travel Open Data Portal</a>.
 </p>
 
 ```
