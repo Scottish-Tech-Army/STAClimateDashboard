@@ -2,7 +2,7 @@ library(lubridate)
 
 library(khroma)
 library(plotly)
-library(crosstalk)
+#library(crosstalk)
 
 
 weekdaysAbbrevRegex <- paste0(levels(wday(1, label = TRUE)), collapse = "|")
@@ -19,10 +19,11 @@ genderRegex <- paste0(gender_options_formatted, collapse = "|")
 
 # initially restricted to it-402dc, but now shared across all,along with other potentially reusable vars
 # colour-blind safe - see https://cran.r-project.org/web/packages/khroma/vignettes/tol.html
-gender_colour_scheme <- c("female" = as.character(colour("bright")(7)["purple"]),
-                          "male" = as.character(colour("bright")(7)["green"]))
+gender_colour_scheme <- c("female" = as.character(colour("muted")(7)["wine"]),
+                          "male" = as.character(colour("muted")(7)["green"]))
 gender_shape_icons <- c("female" = -0x2640L, "male" = -0x2642L) # \u2640 and \u2642 )
 
+# weather_metrics <- c("min_temp", "mean_temp", "max_temp", "rainfall")
 weather_metrics_colour_scheme <- c("min_temp" = as.character(colour("high contrast")(3)["blue"]),
                                    "mean_temp" = as.character(colour("high contrast")(3)["yellow"]),
                                    "max_temp" = as.character(colour("high contrast")(3)["red"]),
@@ -79,7 +80,8 @@ convertToPlotly <-
             
 
         plot_tmp <- ggplotly(ggPlot, tooltip = tooltip, height = height, width = width) %>%
-
+            partial_bundle(local = FALSE) %>%
+            
             style(hoveron = "points", hoverinfo = "text", hoverlabel = list(bgcolor = "white")) %>%
             layout(xaxis = xaxis, yaxis = yaxis, legend = legend,
                    title = list(font = list(size = 20)),

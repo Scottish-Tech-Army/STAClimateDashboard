@@ -445,6 +445,9 @@ filtered_data <-  padding_cycle_counter_data_from_2017 %>%
 
         mutate_at(vars(year), as.ordered) %>%
         mutate_at(vars(Provider, traffic_mode, time), as.factor) %>%
+        mutate_at(vars(Provider), ~ fct_relevel(., default_provider)) %>%
+        mutate_at(vars(Provider), ~ fct_relevel(., "John Muir Way", after = Inf)) %>%
+
         mutate(pseudo_point = if_else(is.na(average), 0, 1),
                tooltip = if_else((pseudo_point == 0), 
                                  "", 
@@ -543,7 +546,9 @@ plot_tmp %>%
                                    pad = list(t = 10)
                                 )) # end dropdown
         
-    )
+    ) %>%
+
+    config(modeBarButtonsToRemove = c("zoomIn2d", "zoomOut2d", "autoScale2d", "pan2d"))
 
 
 
@@ -628,8 +633,9 @@ plot_tmp %>%
                                    buttons = steps_by_provider,
                                    pad = list(t = 10)
                                 )) # end dropdown
-        
-    )
+    ) %>%
+
+    config(modeBarButtonsToRemove = c("zoomIn2d", "zoomOut2d", "autoScale2d", "pan2d"))
 
 
 
@@ -656,6 +662,9 @@ filtered_data <-  padding_cycle_counter_data_from_2017 %>%
         mutate(month = factor(month, levels = month.abb)) %>%
         mutate_at(vars(year), as.ordered) %>%
         mutate_at(vars(Provider, traffic_mode, time), as.factor) %>%
+        mutate_at(vars(Provider), ~ fct_relevel(., default_provider)) %>%
+        mutate_at(vars(Provider), ~ fct_relevel(., "John Muir Way", after = Inf)) %>%
+
         mutate(pseudo_point = if_else(is.na(average), 0, 1),
                tooltip = if_else((pseudo_point == 0), 
                                  "", 
@@ -749,7 +758,9 @@ plot_tmp %>%
                                    pad = list(t = 10)
                                 )) # end dropdown
         
-    )
+    ) %>%
+
+    config(modeBarButtonsToRemove = c("zoomIn2d", "zoomOut2d", "autoScale2d", "pan2d"))
 
 
 
@@ -830,8 +841,9 @@ plot_tmp %>%
                                    pad = list(t = 10)
                                 )) # end dropdown
         
-    )
+    ) %>%
 
+    config(modeBarButtonsToRemove = c("zoomIn2d", "zoomOut2d", "autoScale2d", "pan2d"))
 
 
 
@@ -1107,7 +1119,6 @@ filtered_data <- count_by_location %>%
     arrange(LocalAuthority, Location) %>%
     mutate(across(starts_with("location_label"), ~ fct_inorder(.))) 
 
-
 locations <- levels(filtered_data$distinct_location)           
 
 
@@ -1134,7 +1145,8 @@ for (i in seq_along(locations)) {
                         showlegend = FALSE)
 
   step <- list(args = list("visible", rep(FALSE, length(locations))),
-               label = unique(filtered_data$location_label_local_authority[filtered_data$distinct_location == locations[i]]),                  method = "restyle")
+               label = unique(filtered_data$location_label_local_authority[filtered_data$distinct_location == locations[i]]),
+               method = "restyle")
   step$args[[2]][i] <- TRUE  
   steps[[i]] <- step 
 }  
@@ -1153,8 +1165,9 @@ plot_tmp %>%
           updatemenus = list(list(active = 0, x = 0.385, y = 1.12,
                                   buttons = steps
                                  )) # end dropdown
-    ) # end layout
+      ) %>% # end layout
 
+      config(modeBarButtonsToRemove = c("zoom2d", "zoomIn2d", "zoomOut2d", "autoScale2d", "pan2d"))
 
 rm(filtered_data)
 
@@ -1239,13 +1252,19 @@ plot_tmp %>%
 ## ---- total_count_by_location_grouped_by_year --------
 
 # adapted from https://stackoverflow.com/a/54865094
-# ideally would group into traces but this is not possible in the r implementation
+# ideally would group into traces but this is not possible in the r implementation (as at end 2021)
 
 filtered_data <- count_by_location %>%
     filter(monthOfYear <= end_date) %>%
-    droplevels()
+    droplevels() %>%
+    mutate(distinct_location = paste0(Location, "-", site),
+           location_label_site = paste0(Location, " (", site, ")"),
+           location_label_local_authority = paste0(Location, " (", LocalAuthority, ")")) %>%
+    mutate(across(c(distinct_location, location_label_site, location_label_local_authority), as.factor)) %>%
+    arrange(LocalAuthority, Location) %>%
+    mutate(across(starts_with("location_label"), ~ fct_inorder(.)))
 
-locations <- levels(filtered_data$Location)
+locations <- levels(filtered_data$distinct_location)
 years <- levels(filtered_data$year)
 
 
@@ -1256,7 +1275,7 @@ for (i in seq_along(locations)) {
     for (j in seq_along(years)) {
      
         plot_tmp <- add_lines(plot_tmp, data = filtered_data %>%
-                                            filter((Location == locations[i]) & year == years[j]),
+                                            filter((distinct_location == locations[i]) & year == years[j]),
                               
                               x = ~ month, 
                               y = ~ count, 
@@ -1274,8 +1293,7 @@ for (i in seq_along(locations)) {
 
     
     step <- list(args = list("visible", rep(FALSE, length(locations) * length(years))),
-               label = #paste0(
-                       locations[i], #", ", unique(filtered_data$LocalAuthority[filtered_data$Location == locations[i]])),
+               label = unique(filtered_data$location_label_local_authority[filtered_data$distinct_location == locations[i]]),
                method = "restyle")
     for (j in seq_along(years))    
         step$args[[2]][((i - 1) * length(years)) + j] <- TRUE
@@ -1291,10 +1309,12 @@ plot_tmp %>%
            #sliders = list(list(active = 0,
            #                    currentvalue = list(prefix = "City/town: "),
            #                    steps = steps))
-           updatemenus = list(list(active = 0, x = 0.135, y = 1.12,
+           updatemenus = list(list(active = 0, x = 0.385, y = 1.12,
                                   buttons = steps
                                  )) # end dropdown
-    ) # end layout
+    ) %>% # end layout
+
+    config(modeBarButtonsToRemove = c("autoScale2d", "pan2d"))
 
 rm(filtered_data)
 
@@ -1450,7 +1470,9 @@ plot_tmp %>%
           updatemenus = list(list(active = 0, x = 0.185, y = 1.12,
                                   buttons = steps
                                  )) # end dropdown
-    ) # end layout
+    ) %>% # end layout
+
+    config(modeBarButtonsToRemove = c("zoom2d", "zoomIn2d", "zoomOut2d", "autoScale2d", "pan2d"))
 
 
 
