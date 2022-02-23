@@ -40,9 +40,9 @@ counter_data <- reporting_sites %>%
                      filter(traffic_mode == "bicycle") %>%
                      select(-traffic_mode)) %>% 
 
-    mutate(Location = fct_explicit_na(Location, na_level = "Unspecified Location")) %>%
-    mutate(LocationLabel = paste0(Location, " (", replace_na(LocalAuthority, ""), ")"))%>%
-    mutate_at(vars(LocalAuthority, Location, LocationLabel), as.factor) %>%
+    mutate(Location = fct_explicit_na(Location, na_level = "Unspecified Location"),
+           LocationLabel = paste0(Location, " (", replace_na(LocalAuthority, ""), ")"),
+           across(c(LocalAuthority, Location, LocationLabel), as.factor)) %>%
 
     group_by(Provider, LocalAuthority, Location, LocationLabel, CycleCounter, total_by_site) %>%
     tally() %>%
@@ -136,13 +136,13 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
                 relocate(counter_count, .after = daily_average) %>%
 
               
-                ungroup() %>%
                 #arrange(year, month) %>%
+                
+                group_by(site, Location) %>%
+                mutate(lag = lag(daily_average_by_siteID),
+                       growth_rate_weighted_by_location = (daily_average_by_siteID - lag) / lag) %>%
+                relocate(c(lag, growth_rate_weighted_by_location), .after = daily_average_by_siteID)) %>% # end join
 
-                mutate(lag = lag(count),
-                       GrowthRate = (count - lag(count)) / lag(count)) %>%
-                relocate(GrowthRate, .after = count) %>%
-                relocate(lag, .after = count)) %>% # end join
 
                 mutate_if(is.factor, as.character) %>%
                 drop_na(Location) %>%

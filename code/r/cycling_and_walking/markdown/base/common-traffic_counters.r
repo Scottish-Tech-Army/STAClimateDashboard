@@ -457,12 +457,13 @@ loadAndParseTrafficSurveyData <-
         
         params_as_factor <- c("Code", "LocalAuthority", "Location", "RoadName", "Context", "Direction", "Side",
                               "CountPeriod", "TimePeriod", "countInterval", "TransportationMode")
-        params_as_count <- c("ID", transportation_modes)
-
+        params_as_count <- c("ID", names(transportation_modes))
+        
+        
         data_loaded <- data_loaded %>%
         
             mutate_at(intersect(names(data_loaded), params_as_count), as.integer) %>%
-            pivot_longer(all_of(transportation_modes), names_to = "TransportationMode", values_to = "count") %>%
+            pivot_longer(all_of(names(transportation_modes)), names_to = "TransportationMode", values_to = "count") %>%
             mutate_at(intersect(colnames(.), params_as_factor), as.factor) %>% #- doesn't include new columns
 
             relocate(LocalAuthority, .before = Location) %>%
