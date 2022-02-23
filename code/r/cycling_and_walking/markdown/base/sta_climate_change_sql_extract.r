@@ -48,7 +48,11 @@ reporting_sites <- reporting_sites %>%
                 rename(externalId = siteID)
               ) %>%
     mutate_if(is.factor, as.character) %>%
-    mutate_at(vars(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor) 
+    mutate(across(siteID, ~ coalesce(., externalId)),
+           across(c(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor)) %>%
+
+    # interim to deal with issues with Glasgow spike in Jan 2022
+    filter(!((site == "GLG") & (externalId == "0105")))
 
 
 
@@ -58,7 +62,11 @@ cycle_counter_data_from_2017 <- dbGetQuery(dbConn, "SELECT * FROM counter_data_h
 #head(cycle_counter_data_from_2017)
 
 cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
-    parseCounterDataFromDB()
+    parseCounterDataFromDB() %>%
+    # interim to deal with issues with Glasgow spike in Jan 2022
+    filter(!((Provider == "Glasgow City Council") & (siteID == "0105")))
+
+
 record_total <- nrow(cycle_counter_data_from_2017)
 
 # filter out anything beyond previous month - current month's totals sometimes change, depending on reporting lag

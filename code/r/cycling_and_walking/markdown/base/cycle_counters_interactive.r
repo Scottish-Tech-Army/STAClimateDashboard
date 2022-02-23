@@ -56,7 +56,8 @@ plot_tmp <- plot_ly(height = 380, width = 700)
 for (i in seq_along(providers)) {
     for (j in seq_along(years)) {
         
-        plot_tmp <- add_lines(plot_tmp, data = filtered_data %>%
+        plot_tmp <- add_trace( #add_lines(
+                        plot_tmp, data = filtered_data %>%
                                                 filter((Provider == providers[i]) & year == years[j]),
                               
                               x = ~ month, 
@@ -66,7 +67,7 @@ for (i in seq_along(providers)) {
                               name = years[j], 
 
                               type = "scatter",
-                              mode = "lines",
+                              mode = "lines+markers",
                               hoverinfo = "text",
                               color = ~ year,
                               showlegend = TRUE)
@@ -116,6 +117,7 @@ plot1 <- cycle_counter_data_from_2017 %>%
 
     ggplot(aes(month, count, group = year, colour = year, text = tooltip)) +
         geom_line(size = 0.5) +
+        geom_point(size = 1) +
         scale_y_continuous(labels = scales::label_number_si()) +
         ylab("") + xlab("") + #  - Count by Month# need to set fonts in plotly for consistency with corresponding plot for cycling
         cop_cycling_theme +
@@ -530,6 +532,7 @@ plot_tmp %>%
                         showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE), # zeroline setting being ignored ...
            yaxis = list(tickfont = tickFont, title = list(text = "", font = list(size = 20)), 
                         showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, ticks = "outside"), 
+           legend = list(tracegroupgap = 1),
            shapes = list(create_plotly_geom_vline(7, "rgb(217, 217, 217)"), create_plotly_geom_vline(8, "rgb(217, 217, 217)"),
                          create_plotly_geom_vline(13, "rgb(217, 217, 217)"), create_plotly_geom_vline(14, "rgb(217, 217, 217)"), 
                          create_plotly_geom_vline(16, "rgb(217, 217, 217)"), create_plotly_geom_vline(17, "rgb(217, 217, 217)")),
@@ -618,6 +621,7 @@ plot_tmp %>%
                         showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE), # zeroline setting being ignored ...
            yaxis = list(tickfont = tickFont, title = list(text = "", font = list(size = 20)), 
                         showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, ticks = "outside"), 
+           legend = list(tracegroupgap = 1),
            shapes = list(create_plotly_geom_vline(7, "rgb(217, 217, 217)"), create_plotly_geom_vline(8, "rgb(217, 217, 217)"),
                          create_plotly_geom_vline(13, "rgb(217, 217, 217)"), create_plotly_geom_vline(14, "rgb(217, 217, 217)"), 
                          create_plotly_geom_vline(16, "rgb(217, 217, 217)"), create_plotly_geom_vline(17, "rgb(217, 217, 217)")),
@@ -746,6 +750,7 @@ plot_tmp %>%
                         showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, zeroline = FALSE), # zeroline setting being ignored ...
            yaxis = list(tickfont = tickFont, title = list(text = "", font = list(size = 20)), 
                         showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, ticks = "outside"), 
+           legend = list(tracegroupgap = 1),
            margin = list(l = 5, t = 15),
            sliders = list(list(active = 0, 
                                currentvalue = list(prefix = "Year: "), 
@@ -830,7 +835,8 @@ plot_tmp %>%
            yaxis = list(tickfont = tickFont, title = list(text = "", font = list(size = 20)), 
                         showline = TRUE, linecolor = "rgb(175, 175, 175)", mirror = TRUE, ticks = "outside"), 
            margin = list(l = 5, t = 15),
-           sliders = list(list(active = 0, 
+           legend = list(tracegroupgap = 1),
+           sliders = list(list(active = 0,
                                currentvalue = list(prefix = "Year: "), 
                                pad = list(t = 35), 
                                
@@ -848,7 +854,6 @@ plot_tmp %>%
 
 
 ## ---- average_count_by_location_and_year --------
-
 
 plot_tmp <- plot_ly(height = 700, width = 900, 
                     data = count_by_location %>%
