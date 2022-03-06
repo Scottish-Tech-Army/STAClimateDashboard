@@ -56,7 +56,7 @@ plot_tmp <- plot_ly(height = 380, width = 700)
 for (i in seq_along(providers)) {
     for (j in seq_along(years)) {
         
-        plot_tmp <- add_trace( #add_lines(
+        plot_tmp <- add_lines(
                         plot_tmp, data = filtered_data %>%
                                                 filter((Provider == providers[i]) & year == years[j]),
                               
@@ -67,7 +67,7 @@ for (i in seq_along(providers)) {
                               name = years[j], 
 
                               type = "scatter",
-                              mode = "lines+markers",
+                              mode = "lines",
                               hoverinfo = "text",
                               color = ~ year,
                               showlegend = TRUE)
@@ -117,7 +117,6 @@ plot1 <- cycle_counter_data_from_2017 %>%
 
     ggplot(aes(month, count, group = year, colour = year, text = tooltip)) +
         geom_line(size = 0.5) +
-        geom_point(size = 1) +
         scale_y_continuous(labels = scales::label_number_si()) +
         ylab("") + xlab("") + #  - Count by Month# need to set fonts in plotly for consistency with corresponding plot for cycling
         cop_cycling_theme +
@@ -1142,7 +1141,7 @@ for (i in seq_along(locations)) {
                        name = locations[i],
 
                         #type = "scatter", 
-                        mode = "lines+markers", 
+                        mode = "lines",
                         hoverinfo = "text", 
                         #line = list(color = "00CED1"), 
                         color = ~ LocalAuthority, 
