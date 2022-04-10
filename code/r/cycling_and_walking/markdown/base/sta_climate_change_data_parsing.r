@@ -164,7 +164,7 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
                 mutate_at(vars(year), as.ordered) %>%
                 mutate(month = factor(month, levels = month.abb)) %>%
                 mutate(pseudo_point = if_else(is.na(daily_average), 1, 0), # need this and next to generate full trace sets and legend or animation breaks
-                       tooltip = if_else(as.logical(pseudo_point),
+                        tooltip = if_else(as.logical(pseudo_point),
                                          "",
                                          paste(Location, paste0("(", LocalAuthority, ")"), "-", month, year,
                                                "\nAverage daily count:", formatNumber(round(daily_average)),
