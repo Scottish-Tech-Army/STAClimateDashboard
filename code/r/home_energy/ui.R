@@ -89,7 +89,7 @@ ui <- dashboardPage(
                     column(width = 6, 
                            selectInput(inputId = "year",
                                        label = "Year",
-                                       choices = sort(unique(home_energy$year)),
+                                       choices = sort(unique(home_energy$year_of_assessment)),
                                        selected = "2020"
                            )
                            )

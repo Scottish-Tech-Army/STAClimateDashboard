@@ -5,10 +5,10 @@ server <- function(input, output) {
   output$scotland_energy_overall <- renderPlot({
     
     home_energy %>%
-      group_by(year) %>% 
+      group_by(year_of_assessment) %>% 
       summarise(mean_primary_energy_overall = round(mean(primary_energy), digits = 2)) %>% 
       ggplot() +
-      aes(x = year, y = mean_primary_energy_overall) +
+      aes(x = year_of_assessment , y = mean_primary_energy_overall) +
       geom_line(color = "#3c8dbc") +
       geom_point(color = "#3c8dbc") +
       theme_minimal() +
@@ -24,10 +24,10 @@ server <- function(input, output) {
   #tenure primary
   output$tenure_primary <- renderPlot({
     home_energy %>%
-      group_by(year, tenure) %>% 
+      group_by(year_of_assessment, tenure) %>% 
       summarise(mean_primary_energy_overall = round(mean(primary_energy), digits = 2)) %>% 
       ggplot() +
-      aes(x = year, y = mean_primary_energy_overall) +
+      aes(x = year_of_assessment, y = mean_primary_energy_overall) +
       geom_line(color = "#3c8dbc") +
       geom_point(color = "#3c8dbc") +
       theme_minimal() +
@@ -48,10 +48,10 @@ server <- function(input, output) {
   output$scotland_co2_household <- renderPlot({
     
     home_energy %>%
-      group_by(year) %>% 
+      group_by(year_of_assessment) %>% 
       summarise(mean_current_emissions = round(mean(current_emissions_t_co2_yr), digits = 2)) %>% 
       ggplot() +
-      aes(x = year, y = mean_current_emissions) +
+      aes(x = year_of_assessment, y = mean_current_emissions) +
       geom_line(color = "#3c8dbc") +
       geom_point(color = "#3c8dbc") +
       theme_minimal() +
@@ -67,10 +67,10 @@ server <- function(input, output) {
   #tenure emissions
   output$tenure_emissions <- renderPlot({
     home_energy %>%
-      group_by(year, tenure) %>% 
+      group_by(year_of_assessment, tenure) %>% 
       summarise(mean_current_emissions = round(mean(current_emissions_t_co2_yr), digits = 2)) %>% 
       ggplot() +
-      aes(x = year, y = mean_current_emissions) +
+      aes(x = year_of_assessment, y = mean_current_emissions) +
       geom_line(color = "#3c8dbc") +
       geom_point(color = "#3c8dbc") +
       theme_minimal() +
@@ -87,7 +87,7 @@ server <- function(input, output) {
   ##################Year tab content
   overview_output <- reactive({
     home_energy %>% 
-      filter(year == input$year)
+      filter(year_of_assessment == input$year_of_assessment)
     
   })
   
@@ -95,7 +95,7 @@ server <- function(input, output) {
   output$primary_overview <- renderPlot({
     
     overview_output() %>%
-      group_by(ca_name, year) %>% 
+      group_by(ca_name, year_of_assessment) %>% 
       summarise(mean_primary_energy = round(mean(primary_energy), digits = 2)) %>% 
       ggplot() +
       aes(x = reorder(ca_name, mean_primary_energy), y = mean_primary_energy) +
@@ -115,7 +115,7 @@ server <- function(input, output) {
   output$current_overview <- renderPlot({
     
     overview_output() %>%
-      group_by(ca_name, year) %>% 
+      group_by(ca_name, year_of_assessment) %>% 
       summarise(mean_current_emissions = round(mean(current_emissions_t_co2_yr), digits = 2)) %>% 
       ggplot() +
       aes(x = reorder(ca_name, mean_current_emissions), y = mean_current_emissions) +
@@ -162,10 +162,10 @@ server <- function(input, output) {
   output$primary_energy_output <- renderPlot({
     
     home_energy_output() %>%
-      group_by(ca_name, postcode, year) %>% 
+      group_by(ca_name, postcode, year_of_assessment) %>% 
       summarise(mean_primary_energy = round(mean(primary_energy), digits = 2)) %>% 
       ggplot() +
-      aes(x = year, y = mean_primary_energy) +
+      aes(x = year_of_assessment, y = mean_primary_energy) +
       geom_line(color = "#3c8dbc") +
       geom_point(color = "#3c8dbc") +
       theme_minimal() +
@@ -182,10 +182,10 @@ server <- function(input, output) {
   output$current_emissions_output <- renderPlot({
     
     home_energy_output() %>%
-      group_by(ca_name, postcode, year) %>% 
+      group_by(ca_name, postcode, year_of_assessment) %>% 
       summarise(mean_current_emissions = round(mean(current_emissions_t_co2_yr), digits = 2)) %>% 
       ggplot() +
-      aes(x = year, y = mean_current_emissions) +
+      aes(x = year_of_assessment, y = mean_current_emissions) +
       geom_line(color = "#3c8dbc") +
       geom_point(color = "#3c8dbc") +
       theme_minimal() +

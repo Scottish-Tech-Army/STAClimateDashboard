@@ -15,12 +15,12 @@ home_energy <- read_csv(here("clean_data/home_energy.csv"))
 #current and potential
 #Potential Emissions Overall Scotland
 potential_home_energy <- home_energy %>%
-  group_by(year) %>% 
+  group_by(year_of_assessment) %>% 
   summarise(mean_potential_emissions = round(exp(sum(log(potential_co2[potential_co2 > 0]), na.rm=TRUE) / length(potential_co2)), digits = 2)) 
 
 #Current Emissions Overall Scotland
 current_home_energy <- home_energy %>%
-  group_by(year) %>% 
+  group_by(year_of_assessment) %>% 
   summarise(mean_current_emissions = round(mean(current_emissions_t_co2_yr), digits = 2)) 
 
 current_potential = merge(current_home_energy, potential_home_energy, by="year")
@@ -37,7 +37,7 @@ la_map_scotland <- st_read(here("clean_data/scotland_map_files/scotland_council_
   clean_names()
 
 energy_means <- home_energy %>% 
-  group_by(ca, ca_name, year) %>% 
+  group_by(ca, ca_name, year_of_assessment) %>% 
   summarise(mean_co2_pfa = round(mean(co2_emissions_per_floor_area), digits = 2),
             mean_primary_energy = round(mean(primary_energy), digits = 2),
             mean_current_emissions = round(mean(current_emissions_t_co2_yr), digits = 2))
