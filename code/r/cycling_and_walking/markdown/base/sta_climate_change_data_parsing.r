@@ -101,7 +101,7 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
 
     full_join(reporting_sites %>%
                   filter((externalId %in% counters_reporting_data) |
-                         ((siteID %in% counters_reporting_data) & !(site %in% externalId))) %>%
+                         ((siteID %in% counters_reporting_data) & !(siteID %in% externalId))) %>%
                   distinct(site, LocalAuthority, Location), #CycleCounter),
               by = character()
              ) %>%
@@ -132,8 +132,7 @@ count_by_location <- padding_cycle_counter_data_from_2017 %>%
                           
                 ) %>% # end internal join
               
-                relocate(daily_average_by_siteID, .after = daily_average) %>%
-                relocate(counter_count, .after = daily_average) %>%
+                relocate(c(daily_average_by_siteID, counter_count), .after = daily_average) %>%
 
               
                 #arrange(year, month) %>%
