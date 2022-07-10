@@ -49,10 +49,10 @@ reporting_sites <- reporting_sites %>%
               ) %>%
     mutate_if(is.factor, as.character) %>%
     mutate(across(siteID, ~ coalesce(., externalId)),
-           across(c(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor)) %>%
+           across(c(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor)) #%>%
 
     # interim to deal with issues with Glasgow spike in Jan 2022
-    filter(!((site == "GLG") & (externalId == "0105")))
+    #filter(!((site == "GLG") & (externalId == "0105")))
 
 
 
@@ -62,9 +62,47 @@ cycle_counter_data_from_2017 <- dbGetQuery(dbConn, "SELECT * FROM counter_data_h
 #head(cycle_counter_data_from_2017)
 
 cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
-    parseCounterDataFromDB() %>%
+    parseCounterDataFromDB() #%>%
     # interim to deal with issues with Glasgow spike in Jan 2022
-    filter(!((Provider == "Glasgow City Council") & (siteID == "0105")))
+    #filter(!((Provider == "Glasgow City Council") & (siteID == "0105")))
+
+
+# apply counter filter - catch unusually high reads
+
+#site_max_cutoff <- 5000
+site_mean_cutoff <- 2000
+#high_reads_cutoff <- 1000
+
+source("base/wonky_counter_filter.r")
+
+cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
+    filter(traffic_mode == "bicycle") %>%
+    mutate(monthOfYear = paste(month, year, sep = "-"),
+           across(monthOfYear, as.factor),
+           across(monthOfYear, ~ fct_reorder(., as.numeric(date)))
+          ) %>%
+
+    anti_join(counter_filter_max_values %>%
+                filter((site_max > 1800) | # tmp_cycle_counter_data_from_2017
+                       ((la_max > ((la_median + 1) * 100)) & (site_max >= (la_max / 2)) & (site_max >= 2500)))  %>%
+                distinct() %>%
+                rename(site_count = count) %>%
+
+                left_join(cycle_counter_data_from_2017 %>%
+                            filter(traffic_mode == "bicycle") %>%
+                            mutate(monthOfYear = paste(month, year, sep = "-"),
+                                   across(monthOfYear, as.factor),
+                                   across(monthOfYear, ~ fct_reorder(., as.numeric(date)))) %>%
+                            select(Provider, siteID, site, Location, RoadName, count, date, time, weekday, monthOfYear) #%>%
+                ) %>%
+                filter(((count * 10) > la_max) & (count > 1500)) %>%
+                distinct(site, siteID, monthOfYear)
+    ) %>%
+
+    bind_rows(cycle_counter_data_from_2017 %>%
+                filter(traffic_mode == "pedestrian"))
+
+## END - apply counter filter - catch unusually high reads
 
 
 record_total <- nrow(cycle_counter_data_from_2017)
