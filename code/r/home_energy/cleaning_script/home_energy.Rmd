@@ -154,7 +154,26 @@ home_energy <- home_energy %>%
     date_of_assessment = if_else(year_of_assessment == "2103", paste("2013", month_of_assessment, day_of_assessment, sep = "-"), as.character(date_of_assessment)),
     date_of_assessment = if_else(year_of_assessment == "2108", paste("2018", month_of_assessment, day_of_assessment, sep = "-"), as.character(date_of_assessment)),
   )
+
 home_energy$date_of_assessment <- as.Date(home_energy$date_of_assessment, format="%Y-%m-%d")
+
+home_energy$year_of_assessment <- as.character(home_energy$year_of_assessment)
+
+home_energy <- home_energy %>% 
+  mutate(
+    year_of_assessment = if_else(year_of_assessment == "13", "2013", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "14", "2014", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "15", "2015", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "16", "2016", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "21", "2021", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "213", "2013", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "1970", "2016", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "2002", "2021", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "2103", "2013", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "2108", "2018", year_of_assessment),
+  )
+home_energy$year_of_assessment <- as.numeric(home_energy$year_of_assessment)
+
 ```
 
 #calculating the future CO2 emmissions
