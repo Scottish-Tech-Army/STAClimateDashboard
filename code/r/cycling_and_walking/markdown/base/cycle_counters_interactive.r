@@ -364,7 +364,7 @@ cycle_counter_data_from_2017 %>%
 
 reporting_sites %>%
     mutate(siteID = coalesce(siteID, externalId)) %>%
-    select(siteID, externalId, LocalAuthority, RoadType) %>%
+    select(site, siteID, externalId, LocalAuthority, RoadType) %>%
     mutate_at(vars(RoadType), ~ fct_explicit_na(RoadType, na_level = "-")) %>%
 
     right_join(cycle_counter_data_from_2017 %>%
@@ -388,7 +388,7 @@ reporting_sites %>%
                             
 reporting_sites %>%
     mutate(siteID = coalesce(siteID, externalId)) %>%
-    select(siteID, LocalAuthority, RoadType) %>%
+    select(site, siteID, LocalAuthority, RoadType) %>%
     mutate_at(vars(RoadType), ~ fct_explicit_na(RoadType, na_level = "-")) %>%
 
     right_join(cycle_counter_data_from_2017 %>%
@@ -399,14 +399,14 @@ reporting_sites %>%
                 mutate(max_count = max(count)) %>%
                 mutate_at(vars(date), ~ format(date, format = "%d %b %Y")) %>%
                 filter(count == max_count) %>%
-                distinct(Provider, siteID, traffic_mode, Location, RoadName, date, weekday, count)
+                distinct(Provider, site, siteID, traffic_mode, Location, RoadName, date, weekday, count)
                   ) %>%
     relocate(Provider, .before = siteID) %>%
     relocate(RoadType, .after = RoadName) %>%
     relocate(traffic_mode, .after = Provider) %>%
     select(-count, everything(), count) %>%
     arrange(traffic_mode, desc(count), date) %>% #, month) %>%
-    select(-siteID) %>%
+    #select(-siteID) %>%
     
     rename_with(~ snakecase::to_upper_camel_case(.)) %>%
 
@@ -425,7 +425,7 @@ filtered_data <-  padding_cycle_counter_data_from_2017 %>%
     full_join(as.data.frame(levels(cycle_counter_data_from_2017$weekday)),
                   by = character()) %>%
 
-    rename_with(~c(names(padding_cycle_counter_data_from_2017), "Provider", "traffic_mode", "weekday")) %>%
+    rename_with(~ c(names(padding_cycle_counter_data_from_2017), "Provider", "traffic_mode", "weekday")) %>%
     filter((traffic_mode == "bicycle") & (monthOfYear <= end_date)) %>%
     select(- c(month, monthOfYear)) %>%
 
