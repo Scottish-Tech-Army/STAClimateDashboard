@@ -11,34 +11,40 @@ reporting_sites <- dbGetQuery(dbConn, "SELECT * FROM fixed_counter_locations")
 
 reporting_sites <- reporting_sites %>%
     rename(siteID = id) %>%
-    select(-c(batteryLevel, lastConnected, type, offlineAfterMinutes)) %>%
+    select(-c(batteryLevel, lastConnected, type, offlineAfterMinutes, Location, RoadName, Latitude, Longitude)) %>%
 
+    left_join(dbGetQuery(dbConn, "SELECT * FROM local_authorities")) %>%
     full_join(cycle_counter_locations %>%
-        mutate_at(vars(SiteId), as.character) %>%
-        rename(AltRoadName = RoadName) %>%
-        select(-c(Location, Latitude, Longitude, X, Y)),
+        mutate(across(SiteId, as.character)) %>%
+        #rename(AltRoadName = RoadName) %>%
+        select(- c(X, Y)),
 
-        by = c("externalId" = "SiteId")
+        by = c("externalId" = "SiteId", "LocalAuthority")
     )
 
 reporting_sites <- reporting_sites %>%
     filter(!is.na(siteID)) %>%
-    #mutate_at(vars(siteID, status, site, externalId, LocalAuthority, Location, RoadType), as.factor) %>%
+    #mutate(across(c(siteID, status, site, externalId, LocalAuthority, Location, RoadType), as.factor) %>%
 
     relocate(LocalAuthority, .before = Location) %>%
     relocate(RoadType, .after = RoadName) %>%
     relocate(RoadNumber, .after = RoadName) %>%
     relocate(AltRoadName, .after = RoadName) %>%
-    mutate_at(vars(CycleCounter, PedestrianCounter), ~ parse_date(., "%b-%y"))
+    mutate(across(c(CycleCounter, PedestrianCounter), ~ parse_date(., "%b-%y")))
 
 #str(reporting_sites)
 #head(reporting_sites)
 
+
 non_nmf_counter_metadata <- dbGetQuery(dbConn, "SELECT * FROM non_nmf_counter_locations_metadata")
 
+
 non_nmf_counter_metadata <- non_nmf_counter_metadata %>%
-    mutate_at(vars(start_date, end_date, ends_with("Counter")), as_date) %>%
-    mutate_at(vars(Provider, siteID, site, LocalAuthority, Location, RoadName, RoadType), as.factor)
+    mutate(across(c(start_date, end_date, ends_with("Counter")), as_date),
+           across(c(Provider, siteID, site, LocalAuthority, Location, RoadName, RoadType), as.factor),
+           across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
+                                          "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
+           ) 
 
 reporting_sites <- reporting_sites %>%
     mutate(Provider = default_provider) %>%
@@ -49,14 +55,24 @@ reporting_sites <- reporting_sites %>%
               ) %>%
     mutate_if(is.factor, as.character) %>%
     mutate(across(siteID, ~ coalesce(., externalId)),
-           across(c(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor)) #%>%
+           across(c(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor),
+           across(Provider, ~ fct_relevel(., default_provider)),
+           across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
+                                          "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
+           ) #%>%
 
     # interim to deal with issues with Glasgow spike in Jan 2022
     #filter(!((site == "GLG") & (externalId == "0105")))
 
 
 
-cycle_counter_data_from_2017 <- dbGetQuery(dbConn, "SELECT * FROM counter_data_hourly")
+cycle_counter_data_from_2017 <- reporting_sites %>%
+    select(Provider, site, siteID, Location, RoadName, Latitude, Longitude) %>%
+
+    right_join(dbGetQuery(dbConn, "SELECT * FROM counter_data_hourly") %>%
+                   select(- c(Location, RoadName, Latitude, Longitude))
+               )
+
 
 #dim(cycle_counter_data_from_2017)
 #head(cycle_counter_data_from_2017)
@@ -102,7 +118,14 @@ cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
     bind_rows(cycle_counter_data_from_2017 %>%
                 filter(traffic_mode == "pedestrian"))
 
-## END - apply counter filter - catch unusually high reads
+
+cycle_counter_data_from_2017 <- cycle_counter_data_from_2017  %>%
+  anti_join(counter_filter_zero_daily_counts %>%
+              filter(month_at_zero) %>%
+              distinct(traffic_mode, site, siteID, monthOfYear)
+           )
+
+## END - apply counter filter - catch unusually high reads and filter out zero reads spanning a full month
 
 
 record_total <- nrow(cycle_counter_data_from_2017)
@@ -135,10 +158,12 @@ counter_reporting_metadata <- cycle_counter_data_from_2017 %>%
                 slice(which(count > 0)) %>%
 
                 group_by(Provider, traffic_mode, siteID) %>%
-                summarise(start_date = min(start_date),
-                          end_date = max(end_date),
-                          average = mean(average, na.rm = TRUE),
-                          count = sum(count)) %>%
+                summarise(across(start_date, min),
+                          across(end_date, max),
+                          median = median(count, na.rm = TRUE),
+                          average = mean(count, na.rm = TRUE),
+                          across(count, sum)
+                          ) %>%
                 ungroup()
     )
 
@@ -169,16 +194,22 @@ cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
     ) %>%
 
     left_join(cycle_counter_data_from_2017 %>%
-        group_by(siteID, year, traffic_mode) %>% #, Location, RoadName) %>%
+        group_by(site, siteID, year, traffic_mode) %>% #, Location, RoadName) %>%
         summarise(total_by_counter_and_year = sum(count, na.rm = TRUE))
-    )
+    ) %>%
+
+    mutate(across(time, as.factor),
+           across(Provider, ~ fct_relevel(., default_provider)),
+           across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
+                                          "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
+          )
 
 
-historical_weather_scotland_from_2017 <- dbGetQuery(dbConn,
-                                                    "SELECT * FROM historical_weather_scotland_from_2017")
-historical_weather_scotland_from_2017 <- parseMeteoDataFromDB(historical_weather_scotland_from_2017)
 
-dbDisconnect(dbConn)
+historical_weather_scotland_from_2017 <- dbGetQuery(dbConn, "SELECT * FROM historical_weather_scotland_from_2017") %>%
+    parseMeteoDataFromDB()
+
+#dbDisconnect(dbConn)
 
 
 

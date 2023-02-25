@@ -16,11 +16,13 @@ if (!exists("high_reads_cutoff")) {
 #print(high_reads_cutoff)
 
 
+## ---- counter_filters --------
+
 counter_filter <- #dbGetQuery(dbConn, "SELECT * FROM counter_data_hourly") %>%
     #parseCounterDataFromDB() %>%
     cycle_counter_data_from_2017 %>%
     filter(traffic_mode == "bicycle") %>%
-    select(- c(hour, countInterval, trafficDirection, laneId, starts_with("total"), ends_with("itude"), matches("\\w+Date"))) %>%    
+    select(- c(hour, countInterval, trafficDirection, laneId, starts_with("total"), ends_with("itude"), matches("\\w+Date"))) %>%
     #slice_sample(n = 5000) %>%
 
     mutate(monthOfYear = paste0(month, "-", year),
@@ -76,7 +78,6 @@ counter_filter_summary <- counter_filter %>%
            )
 
 
-
 counter_filter_max_values <- counter_filter %>%
     distinct(site, Location, RoadName, counter_start, site_mean, site_median, site_max) %>%
     group_by(site, siteID) %>%
@@ -94,3 +95,58 @@ counter_filter_max_values <- counter_filter %>%
 
 rm(site_max_cutoff, site_mean_cutoff, high_reads_cutoff)
 
+
+
+## ---- counter_filter_zero_daily_counts --------
+
+counter_filter_zero_daily_counts <- cycle_counter_data_from_2017 %>%
+    #filter(traffic_mode == "bicycle") %>%
+    group_by(Provider, traffic_mode, site, siteID, Location, RoadName) %>%
+    summarise(days_reporting = n_distinct(date, na.rm = TRUE),
+              counter_start = min(date, na.rm = TRUE)) %>%
+
+    right_join(cycle_counter_data_from_2017 %>%
+                  #filter(traffic_mode == "bicycle") %>%
+                  group_by(traffic_mode, date, site, siteID, Location, RoadName) %>%
+                  summarise(across(count, sum, na.rm = TRUE)) %>%
+                  filter(count == 0)
+              )
+
+counter_filter_zero_daily_counts <- counter_filter_zero_daily_counts %>%
+
+    full_join(counter_filter_zero_daily_counts %>%
+                group_by(across(!c(date, count))) %>%
+                summarise(days_at_zero = n(),
+                          start_date = min(date),
+                          end_date = max(date)
+                         )
+              ) %>%
+    full_join(counter_filter_zero_daily_counts %>%
+                mutate(monthOfYear = paste(month(date, label = TRUE), year(date), sep = "-"),
+                       across(monthOfYear, as.factor),
+                       across(monthOfYear, ~ fct_reorder(., date))
+                      )
+             ) %>%
+    ungroup()
+
+
+counter_filter_zero_daily_counts <- counter_filter_zero_daily_counts %>%
+                mutate(monthOfYear = paste(month(date, label = TRUE), year(date), sep = "-"),
+                       across(monthOfYear, as.factor),
+                       across(monthOfYear, ~ fct_reorder(., date))
+                      )
+
+
+counter_filter_zero_daily_counts <- counter_filter_zero_daily_counts %>%
+
+    left_join(counter_filter_zero_daily_counts %>%
+                group_by(site, siteID, monthOfYear, days_at_zero) %>%
+                summarise(days_in_month = days_in_month(date),
+                          days_at_zero_per_month = n(),
+                          month_at_zero = (days_at_zero_per_month == days_in_month),
+                          ) %>%
+                ungroup() %>%
+                distinct(site, siteID, monthOfYear, month_at_zero)
+              )
+
+#glimpse(counter_filter_zero_daily_counts)
