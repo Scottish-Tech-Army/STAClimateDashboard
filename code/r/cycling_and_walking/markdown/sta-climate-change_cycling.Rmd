@@ -23,6 +23,47 @@ output:
   }
 </style>
 
+
+```{css, echo = FALSE}
+
+  .wide_image {
+    overflow-x:scroll;
+    white-space: nowrap;
+  }
+
+  .wide_image img {
+    max-width: none;
+  }
+
+
+  .medium_image {
+    overflow-x:scroll;
+    white-space: nowrap;
+  }
+
+  .medium_image img {
+    max-width: 600px;
+  }
+
+  .large_image {
+    overflow:scroll;
+    white-space: nowrap;
+  }
+
+  .large_image img {
+    max-width: none;
+    max-height: none;
+  }
+
+  .show_hide_element_box {
+    #color: #fff;
+    /* padding: 20px; */
+    display: none;
+    /* margin-top: 20px; */
+  }
+
+```
+
 ```{r global-options, include = FALSE, cache = FALSE}
 
 knitr::opts_chunk$set(out.width = '100%', out.height = '100%', fig.align = 'left',
@@ -45,6 +86,7 @@ source("base/common_interaction.r")
 
 #library(plotly)
 library(crosstalk)
+library(RColorBrewer)
 
 library(knitr)
 library(kableExtra)
@@ -76,13 +118,21 @@ Row {data-height=45}
 Column {data-height=800}
 -----------------------------------------------------------------------
 
+```{r, bicycle_counts_summaries}
+```
+
 ### Cyclists &ndash; Total Count by Month &amp; Year
 ```{r, bicycle_counts}
 ```
 
 ### Pedestrians &ndash; Total Count by Month &amp; Year
+
+```{r, pedestrian_counts_summaries_nmf}
+```
+
 ```{r, pedestrian_counts_nmf}
 ```
+
 
 
 Row {.tabset .tabset-fade}
@@ -98,16 +148,18 @@ Row {.tabset .tabset-fade}
 ```{=html}
 <p>&nbsp;<br />
 Focusing on the NMF counters, at end `r format(end_date, "%b %Y") ` approximately <b>`r nmf_count_summaries["bicycle"] ` bikes</b> and <b>`r nmf_count_summaries["pedestrian"] ` pedestrians</b> had been recorded going past all counters.
-Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling counts dropped overall</b>, even with higher counts than seen over the summer months in 2020. Counts then started to drop after the highest peak to date in Aug (2021) to the lowest counts recorded for 2021 in Dec, even with an increase in counters across the country.
+Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling counts dropped overall</b>, even with higher counts than seen over the summer months in 2020. Counts then started to drop after the highest peak to date, including also non-NMF counters, in Aug (2021) to the lowest counts recorded for 2021 in Dec, even with an increase in counters across the country.
 <!-- This may be weather-related; icy weather at the start of 2021 and unusually cold weather and even snow in May saw very low counts, while higher counts were seen over the warmer summer months than were recorded in 2020. --><br />
- <b>Walking, overall, continued to rise in 2021.</b> But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then started to fall again in Aug. Walking rose in Sep before starting to fall again in Oct, and as for cycling, to its lowest count in 2021 in Dec.
+ <b>Walking, overall, continued to rise in 2021.</b> But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then started to fall again in Aug. Walking rose in Sep before starting to fall again in Oct, and as for cycling, to its lowest count in 2021 in Dec.<br />
+ <b>Both walking and cycling dropped in 2022, compared to 2021</b>
 </p>
 <p>&nbsp;<br />
 
 <p>
-The data now also includes council-managed counters. However, the much larger number of counters and denser network in the two largest cities, Glasgow and Edinburgh, skew the data especially when looking at totals. We therefore compare data across location and time using predominantly average counts (across locations and/or counters).
+The data now also includes council-managed counters, Sustrans counters on the Natioanal Cycle NETWORK (NCN) and along key points on trunk roads. Five counters along the John Muir Way, located around the west, central belt are also included in the data reported.
+It should be noted that the much larger number of counters in the two largest cities, Glasgow and the particularly dense network in Edinburgh, skew the data especially when looking at totals. We therefore compare data across location and time using predominantly average and/or median counts (across locations and/or counters).
 </p><p>
-Five counters along the John Muir Way, located around the west, central belt are also included in the data reported.
+
 </p>
 
 
@@ -126,12 +178,17 @@ Five counters along the John Muir Way, located around the west, central belt are
 
 ####
 ```{=html}
-<p></p>
+<p>
+  Counters ...
+</p>
 ```
 
 ####
 
-```{r, counters_installed, fig.height = 12, fig.width = 10}
+```{r, counters_reporting}
+```
+
+```{r, counters_reporting_plotly, fig.height = 8, fig.width = 20}
 ```
 
 
@@ -252,7 +309,7 @@ Any or all of day of the week, time of day and month in the year, and recent wea
 
 ```{=html}
   <p>&nbsp;<br /></p>
-  
+
 ```
 
 ```{r, summary_tables_max_counts_daily, results = 'asis'}
@@ -348,5 +405,14 @@ NOTE TO SELF - PUT NMF ABOUT PEDESTRIAN AND ALSO EXPLANATIONS ABOUT CALCULATIONS
 <a href = "https://www.metoffice.gov.uk/research/climate/maps-and-data/uk-and-regional-series" target = "_blank">Historical weather pattern data</a> was obtained from the Met Office.
 
 </p>
+
+```
+
+
+```{r}
+# cleanup ...
+
+dbDisconnect(dbConn)
+#dbConn
 
 ```
