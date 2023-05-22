@@ -60,6 +60,7 @@ counter_data <- counter_data %>%
                 group_by(Provider, LocalAuthority, Location) %>%
                 summarise(LatestInstallation = max(CycleCounter))
               ) %>%
+    ungroup() %>%
 
     filter(Location != "Unspecified Location")
 

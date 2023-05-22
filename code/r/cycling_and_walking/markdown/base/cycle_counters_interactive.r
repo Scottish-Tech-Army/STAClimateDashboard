@@ -3,51 +3,200 @@
 
 label_all_bicycle_providers <- "All Bicycle Counters" #Data Providers"
 
+
 filtered_data <- padding_cycle_counter_data_from_2017 %>%
     full_join(as.data.frame(levels(cycle_counter_data_from_2017$Provider)),
                   by = character()) %>%
     full_join(as.data.frame(levels(cycle_counter_data_from_2017$traffic_mode)),
                   by = character()) %>%
-    rename_with(~c(names(padding_cycle_counter_data_from_2017), "Provider", "traffic_mode")) %>%
+    rename_with(~ c(names(padding_cycle_counter_data_from_2017), "Provider", "traffic_mode")) %>%
     filter((traffic_mode == "bicycle") & (monthOfYear <= end_date)) %>%
     select(- c(monthOfYear, time)) %>%
 
     full_join(cycle_counter_data_from_2017 %>%
-        filter(traffic_mode == "bicycle") %>%
-        group_by(Provider, traffic_mode, year, month) %>%
-        summarise(average = mean(count, na.rm = TRUE), 
-                  count = sum(count, na.rm = TRUE)
-                 ) %>%
-             
-        bind_rows(cycle_counter_data_from_2017 %>%
-                    filter(traffic_mode == "bicycle") %>%
-                    mutate(Provider = label_all_bicycle_providers) %>%
-                    group_by(Provider, traffic_mode, year, month) %>%
-                    summarise(average = mean(count, na.rm = TRUE), 
-                              count = sum(count, na.rm = TRUE)
-                    ) 
-                )
-             ) %>%
+                filter(traffic_mode == "bicycle") %>%
 
-        mutate(month = factor(month, levels = month.abb),
-               monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y")) %>%
+                group_by(Provider, year, month, date) %>%
+                summarise(count = sum(count, na.rm = TRUE)) %>%
+
+                group_by(Provider, year, month) %>%
+                summarise(average = mean(count, na.rm = TRUE),
+                          median = median(count, na.rm = TRUE),
+                          count = sum(count, na.rm = TRUE)
+                         ) %>%
+
+                full_join(cycle_counter_data_from_2017 %>%
+                            filter(traffic_mode == "bicycle") %>%
+
+                            group_by(Provider, year, month, site, date) %>%
+                            summarise(count = sum(count, na.rm = TRUE)) %>%
+
+                            group_by(Provider, year, month) %>%
+                            summarise(no_of_sites = n_distinct(site),
+                                      average = mean(count, na.rm = TRUE),
+                                      median = median(count, na.rm = TRUE),
+                                     ) %>%
+                            rename_with(~ paste0(., "_site"), c(average, median))
+                ) %>%
+
+                full_join(cycle_counter_data_from_2017 %>%
+                            filter(traffic_mode == "bicycle") %>%
+
+                            group_by(Provider, year, month, site, siteID, date) %>%
+                            summarise(count = sum(count, na.rm = TRUE)) %>%
+
+                            group_by(Provider, year, month) %>%
+                            summarise(no_of_counters = n_distinct(siteID),
+                                      average = mean(count, na.rm = TRUE),
+                                      median = median(count, na.rm = TRUE),
+                                     ) %>%
+                            rename_with(~ paste0(., "_siteId"), c(average, median))
+                ) %>%
+
+
+                bind_rows(cycle_counter_data_from_2017 %>%
+                            filter(traffic_mode == "bicycle") %>%
+
+                            group_by(Provider, year, month, date) %>%
+                            summarise(count = sum(count, na.rm = TRUE)) %>%
+
+                            mutate(Provider = label_all_bicycle_providers) %>%
+                            group_by(Provider, year, month) %>%
+                            summarise(average = mean(count, na.rm = TRUE),
+                                      median = median(count, na.rm = TRUE),
+                                      count = sum(count, na.rm = TRUE)
+                            ) %>%
+
+                            full_join(cycle_counter_data_from_2017 %>%
+                                        filter(traffic_mode == "bicycle") %>%
+
+                                        group_by(Provider, year, month, site, date) %>%
+                                        summarise(count = sum(count, na.rm = TRUE)) %>%
+
+                                        mutate(Provider = label_all_bicycle_providers) %>%
+                                        group_by(Provider, year, month) %>%
+                                        summarise(no_of_sites = n_distinct(site),
+                                                  average = mean(count, na.rm = TRUE),
+                                                  median = median(count, na.rm = TRUE),
+                                                 ) %>%
+                                        rename_with(~ paste0(., "_site"), c(average, median))
+                            ) %>%
+
+                            full_join(cycle_counter_data_from_2017 %>%
+                                        filter(traffic_mode == "bicycle") %>%
+
+                                        group_by(Provider, year, month, site, siteID, date) %>%
+                                        summarise(count = sum(count, na.rm = TRUE)) %>%
+
+                                        mutate(Provider = label_all_bicycle_providers) %>%
+                                        group_by(Provider, year, month) %>%
+                                        summarise(no_of_counters = n_distinct(siteID),
+                                                  average = mean(count, na.rm = TRUE),
+                                                  median = median(count, na.rm = TRUE),
+                                                 ) %>%
+                                        rename_with(~ paste0(., "_siteId"), c(average, median))
+                            )
+                        ) # end bind rows
+             ) %>% # end join (to padding)
+
+        mutate(traffic_mode = "bicycle", # need to fill in for "all"
+               month = factor(month, levels = month.abb),
+               monthOfYear = parse_date(paste0(month, "-", year), format = "%b-%Y"),
+
+               across(c(Provider, traffic_mode), as.factor),
+               across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
+                                              "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
+               across(year, as.ordered),
+              ) %>%
         relocate(monthOfYear, .after = month) %>%
-        mutate_at(vars(year), as.ordered) %>%
-        mutate_at(vars(Provider, traffic_mode), as.factor) %>%
-        mutate_at(vars(Provider), ~ fct_relevel(., c(label_all_bicycle_providers, default_provider))) %>%
-        mutate_at(vars(Provider), ~ fct_relevel(., "John Muir Way", after = Inf)) %>%
         mutate(pseudo_point = if_else(is.na(average), 0, 1),
-               tooltip = if_else((pseudo_point == 0), 
-                                 "", 
-                                 paste(Provider, "-", formatNumber(count), paste0(traffic_mode, "s"), "-", month, year))
-                   ) %>%
-        mutate_at(vars(count, pseudo_point), as.integer) %>%
-        mutate_at(vars(average, count), ~ replace_na(., -Inf)) 
-
-
+               tooltip = if_else((pseudo_point == 0),
+                                 "",
+                                 paste(Provider, "-", formatNumber(count), paste0(traffic_mode, "s (", no_of_counters),
+                                       " counters)", "-", month, year)),
+               tooltip_mean = if_else((pseudo_point == 0),
+                                 "",
+                                 paste(Provider, "- total", paste0(formatNumber(count), "; daily average: "),
+                                       formatNumber(average), paste0(traffic_mode, "s"), "-", month, year)),
+               tooltip_median = if_else((pseudo_point == 0),
+                                 "",
+                                 paste(Provider, "- total", paste0(formatNumber(count), "; typical, daily: "),
+                                       formatNumber(median), paste0(traffic_mode, "s"), "-", month, year)),
+               tooltip_mean_by_counter = if_else((pseudo_point == 0),
+                                 "",
+                                 paste(Provider, "- total", paste0(formatNumber(count), "; daily average across "),
+                                       no_of_counters, " counters: ", formatNumber(average_siteId),
+                                       paste0(traffic_mode, "s"), "-", month, year)),
+               tooltip_median_by_counter = if_else((pseudo_point == 0),
+                                 "",
+                                 paste(Provider, "- total", paste0(formatNumber(count), "; typical count daily across "),
+                                       no_of_counters, " counters: ", formatNumber(median_siteId),
+                                       paste0(traffic_mode, "s"), "-", month, year)),
+               across(c(count, pseudo_point), as.integer),
+               across(matches("average|count|median"), ~ replace_na(., -Inf)),
+              )
 
 providers <- levels(filtered_data$Provider)
-years <- levels(filtered_data$year) 
+years <- levels(filtered_data$year)
+
+
+
+  steps <- list()
+  plot_tmp <- plot_ly(height = 380, width = 700)
+
+
+  for (i in seq_along(providers)) {
+      for (j in seq_along(years)) {
+          
+          plot_tmp <- add_lines(
+                          plot_tmp, data = filtered_data %>%
+                                                  filter((Provider == providers[i]) & year == years[j]),
+                                
+                                x = ~ month, 
+                                y = ~ count, 
+                                text = ~ tooltip, 
+                                visible = (providers[i] == label_all_bicycle_providers), 
+                                name = years[j], 
+
+                                type = "scatter",
+                                mode = "lines",
+                                hoverinfo = "text",
+                                color = ~ year,
+                                showlegend = TRUE)
+
+      } # end iteration over years
+
+      
+      step <- list(args = list("visible", rep(FALSE, length(providers) * length(years))),
+                 label = providers[i],
+                 method = "restyle")
+      for (j in seq_along(years))    
+          step$args[[2]][((i - 1) * length(years)) + j] <- TRUE
+      steps[[i]] = step
+
+  } # end iteration over providers
+
+
+  plot_tmp %>%
+      layout(xaxis = list(tickfont = tickFont, title = list(text = ""), ticks = "outside", showgrid = FALSE, 
+                          zeroline = TRUE, rangemode = "tozero"), # both ignored post restyle :@
+             yaxis = list(tickfont = tickFont, title = list(text = "Bicycle", font = list(size = 20)), ticks = "outside"), 
+             margin = list(l = 5),
+          
+             annotations = list(x = -0.075, y = -0.25, text = "<b>Select Data Provider</b>", font = list(size = 14), 
+                                yref = "paper", xref = "paper", xanchor = "left", yanchor = "bottom", showarrow = FALSE),
+             updatemenus = list(list(active = (which(str_detect(providers, fixed(label_all_bicycle_providers, TRUE))) - 1), 
+                                     x = 0.72, y = -0.15, direction = "up",
+                                     buttons = steps
+                                  )) # end dropdown
+      ) %>%
+      config(displayModeBar = FALSE) 
+
+
+#rm(label_all_bicycle_providers)
+
+
+## ---- bicycle_counters_average --------
 
 steps <- list()
 plot_tmp <- plot_ly(height = 380, width = 700)
@@ -55,16 +204,16 @@ plot_tmp <- plot_ly(height = 380, width = 700)
 
 for (i in seq_along(providers)) {
     for (j in seq_along(years)) {
-        
+      
         plot_tmp <- add_lines(
                         plot_tmp, data = filtered_data %>%
                                                 filter((Provider == providers[i]) & year == years[j]),
                               
-                              x = ~ month, 
-                              y = ~ count, 
-                              text = ~ tooltip, 
-                              visible = (providers[i] == label_all_bicycle_providers), 
-                              name = years[j], 
+                              x = ~ month,
+                              y = ~ average_siteId,
+                              text = ~ tooltip_mean_by_counter,
+                              visible = (providers[i] == label_all_bicycle_providers),
+                              name = years[j],
 
                               type = "scatter",
                               mode = "lines",
@@ -78,7 +227,7 @@ for (i in seq_along(providers)) {
     step <- list(args = list("visible", rep(FALSE, length(providers) * length(years))),
                label = providers[i],
                method = "restyle")
-    for (j in seq_along(years))    
+    for (j in seq_along(years))
         step$args[[2]][((i - 1) * length(years)) + j] <- TRUE
     steps[[i]] = step
 
@@ -86,24 +235,73 @@ for (i in seq_along(providers)) {
 
 
 plot_tmp %>%
-    layout(xaxis = list(tickfont = tickFont, title = list(text = ""), ticks = "outside", showgrid = FALSE, 
+    layout(xaxis = list(tickfont = tickFont, title = list(text = ""), ticks = "outside", showgrid = FALSE,
                         zeroline = TRUE, rangemode = "tozero"), # both ignored post restyle :@
-           yaxis = list(tickfont = tickFont, title = list(text = "Bicycle", font = list(size = 20)), ticks = "outside"), 
+           yaxis = list(tickfont = tickFont, title = list(text = "Bicycle - Daily Average", font = list(size = 20)), ticks = "outside"),
            margin = list(l = 5),
-        
-           annotations = list(x = -0.075, y = -0.25, text = "<b>Select Data Provider</b>", font = list(size = 14), 
+
+           annotations = list(x = -0.075, y = -0.25, text = "<b>Select Data Provider</b>", font = list(size = 14),
                               yref = "paper", xref = "paper", xanchor = "left", yanchor = "bottom", showarrow = FALSE),
-           updatemenus = list(list(active = (which(str_detect(providers, fixed(label_all_bicycle_providers, TRUE))) - 1), 
+           updatemenus = list(list(active = (which(str_detect(providers, fixed(label_all_bicycle_providers, TRUE))) - 1),
                                    x = 0.72, y = -0.15, direction = "up",
                                    buttons = steps
                                 )) # end dropdown
     ) %>%
-    config(displayModeBar = FALSE) 
+    config(displayModeBar = FALSE)
 
 
-rm(label_all_bicycle_providers)
+## ---- bicycle_counters_median --------
+
+steps <- list()
+plot_tmp <- plot_ly(height = 380, width = 700)
 
 
+for (i in seq_along(providers)) {
+    for (j in seq_along(years)) {
+      
+        plot_tmp <- add_lines(
+                        plot_tmp, data = filtered_data %>%
+                                                filter((Provider == providers[i]) & year == years[j]),
+                              
+                              x = ~ month,
+                              y = ~ median_siteId,
+                              text = ~ tooltip_median_by_counter,
+                              visible = (providers[i] == label_all_bicycle_providers),
+                              name = years[j],
+
+                              type = "scatter",
+                              mode = "lines",
+                              hoverinfo = "text",
+                              color = ~ year,
+                              showlegend = TRUE)
+
+    } # end iteration over years
+
+    
+    step <- list(args = list("visible", rep(FALSE, length(providers) * length(years))),
+               label = providers[i],
+               method = "restyle")
+    for (j in seq_along(years))
+        step$args[[2]][((i - 1) * length(years)) + j] <- TRUE
+    steps[[i]] = step
+
+} # end iteration over providers
+
+
+plot_tmp %>%
+    layout(xaxis = list(tickfont = tickFont, title = list(text = ""), ticks = "outside", showgrid = FALSE,
+                        zeroline = TRUE, rangemode = "tozero"), # both ignored post restyle :@
+           yaxis = list(tickfont = tickFont, title = list(text = "Bicycle - Daily Median", font = list(size = 20)), ticks = "outside"),
+           margin = list(l = 5),
+
+           annotations = list(x = -0.075, y = -0.25, text = "<b>Select Data Provider</b>", font = list(size = 14),
+                              yref = "paper", xref = "paper", xanchor = "left", yanchor = "bottom", showarrow = FALSE),
+           updatemenus = list(list(active = (which(str_detect(providers, fixed(label_all_bicycle_providers, TRUE))) - 1),
+                                   x = 0.72, y = -0.15, direction = "up",
+                                   buttons = steps
+                                )) # end dropdown
+    ) %>%
+    config(displayModeBar = FALSE)
 
 ## ---- pedestrian_counts_nmf --------
 
@@ -415,9 +613,281 @@ reporting_sites %>%
 
 
 
+## ---- counters_reporting --------
+
+counters_reporting <- counter_filter_zero_daily_counts %>%
+    filter((traffic_mode == "bicycle") & month_at_zero) %>%
+    distinct(Provider, site, siteID, Location, monthOfYear, month_at_zero) %>%
+    count(name = "CountersNotReporting", Provider, site, Location, monthOfYear, month_at_zero) %>%
+
+    full_join(cycle_counter_data_from_2017 %>%
+                filter(traffic_mode == "bicycle") %>%
+                distinct(Provider, site, siteID, Location, monthOfYear) %>%
+                count(name = "CountersReporting", Provider, site, Location, monthOfYear)
+              ) %>%
+
+    left_join(reporting_sites %>%
+                  select(Provider, site, LocalAuthority, Location)
+             ) %>%
+    distinct() %>%
+    relocate(LocalAuthority, .before = site) %>%
+
+    group_by(LocalAuthority, site, Location, monthOfYear) %>%
+    summarise(month_at_zero = as.logical(sum(month_at_zero, na.rm = TRUE)),
+              across(matches("Reporting"), sum, na.rm = TRUE)
+             ) %>%
+    ungroup() %>%
+    mutate(tooltip = case_when(month_at_zero ~
+                                   case_when((CountersReporting == 0) ~
+                                                 if_else((CountersNotReporting == 1),
+                                                         paste(CountersNotReporting, "counter, not"),
+                                                         paste("none of", CountersNotReporting, "counters")),
+                                             TRUE ~ paste(CountersNotReporting, "of", (CountersNotReporting + CountersReporting),
+                                                          "counters not")
+                                            ),
+                               TRUE ~ if_else((CountersReporting == 1),
+                                              paste(CountersReporting, "counter"),
+                                              paste("all", CountersReporting, "counters"))
+                              ),
+           across(tooltip, ~ paste0(Location, " (", LocalAuthority, ") - ", monthOfYear, ": ", ., " reporting")),
+          )
+
+
+la_labels <- counters_reporting %>%
+
+    distinct(LocalAuthority, site) %>%
+    mutate(across(everything(), as.character),
+           across(LocalAuthority, ~ paste0(., " (", site, ")"))) %>%
+    deframe()
+
+
+filtered_data = counters_reporting %>%
+
+                    mutate(across(LocalAuthority, ~ paste0(., " (", site, ")")),
+                           across(Location, ~ paste0(., " (", site, ")")),
+                           proportion_reporting = (CountersReporting / (CountersNotReporting + CountersReporting)),
+                           across(Location, ~ fct_reorder(., proportion_reporting)),
+                           across(c(monthOfYear, Location), ~ fct_rev(.)), # order descending does not give order expected ...
+
+                           switch_counter_reporting = case_when(!month_at_zero ~ "AllCountersReporting", #all_markers_reporting"
+                                                                (CountersReporting == 0) ~ "NoCountersReporting",
+                                                                if_all(matches("^Counters\\w*Reporting$", ~ (. > 0))) ~ "SomeCountersReporting", #no_markers_reporting",
+                                                               ),
+                           across(switch_counter_reporting, as.factor),
+                           across(month_at_zero, as.integer),
+                          )
+
+
+local_authorities <-
+    filtered_data %>%
+        distinct(LocalAuthority) %>%
+        deframe()
+
+live_counters <- filtered_data %>%
+    distinct(switch_counter_reporting) %>%
+    arrange(switch_counter_reporting) %>%
+
+    mutate(label = as.character(switch_counter_reporting),
+           across(switch_counter_reporting, as.integer)
+           ) %>%
+    deframe()
+
+
+# 1'AllCounters_reporting'2'NoCountersReporting'3'SomeCountersReporting'
+
+markers_partially_reporting <- list(target = "SomeCountersReporting",
+                                    value = list(marker = list(size = 5.5,
+                                                               symbol = "222" #"star-diamond-dot" # iffy with text labels ...
+                                                              ))
+                             )
+
+no_markers_reporting <- list(target = "NoCountersReporting",
+                              value = list(marker = list(size = 5,
+                                                         symbol = "25" #"hourglass",
+                                                        ))
+                             )
+
+all_markers_reporting <- list(target = "AllCountersReporting",
+                              value = list(marker = list(size = 4.5,
+                                                         #line = list(width = 1),
+                                                         symbol = "0" #"circle"
+                                                        ))
+                          )
+
+
+## ---- counters_reporting_plotly --------
+
+steps <- list()
+
+plot_tmp <- plot_ly(height = 1200, width = 3000)
+
+
+steps[[1]] <- list(args = list("visible", rep(TRUE, (length(live_counters) + 1) * length(local_authorities))),
+                      label = "All Counters",
+                      method = "restyle")
+
+
+for (i in seq_along(live_counters)) {
+
+    step <- list(args = list("visible", rep(FALSE, (length(live_counters) + 1) * length(local_authorities))),
+                 label = live_counters[[i]],
+                 method = "restyle")
+    
+    if (i == 1) {
+        for (j in seq_along(local_authorities)) {
+
+            plot_tmp <- add_trace(plot_tmp, data = filtered_data %>%
+                                                      filter(LocalAuthority == local_authorities[j]),
+
+                                      x = ~ Location,
+                                      y = ~ monthOfYear,
+                                      text = ~ tooltip,
+                                      name = ~ LocalAuthority,
+
+                                      type = "scatter",
+                                      mode = "markers",
+                                      hoverinfo = "skip",
+
+                                      marker = list(size = 0.001,
+                                                    symbol = "circle-open",
+                                                    opacity = 0.95
+                                                   ),
+                                      
+                                      color = ~ LocalAuthority,
+                                      colors = colorRampPalette(colour("roma", force = TRUE)(33))(length(levels(counters_reporting$LocalAuthority))),
+
+                                      legendgroup = ~ site
+                                 )
+
+            #step$args[[2]][(length(live_counters) * length(local_authorities)) + j] <- TRUE
+            #steps[[1]]$args[[2]][(length(live_counters) * length(local_authorities)) + j] <- TRUE
+        }
+    }
+    
+    for (j in seq_along(local_authorities)) {
+      
+            plot_tmp <- add_trace(plot_tmp, data = filtered_data %>%
+                                      filter((LocalAuthority == local_authorities[j]) & (switch_counter_reporting == live_counters[[i]])),
+
+                                      x = ~ Location,
+                                      y = ~ monthOfYear,
+                                      text = ~ tooltip,
+                                      name = ~ LocalAuthority,
+
+                                      type = "scatter",
+                                      mode = "markers",
+                                      hoverinfo = "text",
+                                  
+                                      #symbol = ~ switch_counter_reporting,
+                                      #§symbols = c("circle", "star-diamond-dot", "cross-open-dot"),
+
+                                      color = ~ LocalAuthority,
+                                      colors = colorRampPalette(colour("roma", force = TRUE)(33))(length(levels(counters_reporting$LocalAuthority))),
+
+                                      showlegend = FALSE,
+                                      legendgroup = ~ site,
+                                  
+                                      transforms = list(list(type = "groupby",
+                                                              groups = ~ switch_counter_reporting,
+                                                              styles = list(all_markers_reporting,
+                                                                            no_markers_reporting,
+                                                                            markers_partially_reporting
+                                                              )
+                                                          )
+                                                      )
+                                 )
+
+        step$args[[2]][((i) * length(local_authorities)) + j] <- TRUE
+        step$args[[2]][j] <- TRUE
+
+    } # end iteration over local_authorities
+    
+    steps[[i + 1]] <- step
+    
+} # end iteration over live_counters
+
+
+plot_tmp %>%
+  layout(title = list(text = "Bicycle Counters - Location", y = 1, x = 0.1, xanchor = "left", yanchor = "top"),
+         xaxis = list(autotypenumbers = "strict", tickfont = tickFont, title = list(text = "", titlefont = list(size = 20)),
+                      autotick = FALSE, type = "category", categoryarray = levels(filtered_data$Location), categoryorder = "array",
+                      ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgba(175, 175, 175, 0.3)", mirror = TRUE,
+                      zeroline = FALSE, tickangle = -45, side = "top"
+                     ),
+         yaxis = list(autotypenumbers = "strict", autorange = "reversed",
+                      tickfont = tickFont, title = list(text = "", titlefont = list(size = 20)),
+                      autotick = FALSE, type = "category", categoryarray = levels(filtered_data$monthOfYear), categoryorder = "array",
+                      ticks = "outside", showgrid = TRUE, showline = TRUE, linecolor = "rgba(175, 175, 175, 0.3)", mirror = TRUE),
+         legend = list(title = list(text = "Local Authority", font = list(size = 14)),
+                       itemsizing = "constant", #itemwidth = 30, #sizing ignored ...
+                       tracegroupgap = 1),
+         margin = list(l = 1),
+         updatemenus = list(list(active = 0, x = 1.09, y = 1.05,
+                                   buttons = steps
+                                 )
+                            )
+        )
+
+
+## ---- counters_reporting_ggplotly --------
+
+plot1 <- counters_reporting %>%
+
+    mutate(across(LocalAuthority, ~ paste0(., " (", site, ")")),
+           across(Location, ~ paste0(., " (", site, ")")),
+           proportion_reporting = (CountersReporting / (CountersNotReporting + CountersReporting)),
+           across(Location, ~ fct_reorder(., proportion_reporting)),
+           across(Location, ~ fct_rev(.)), # order desceding does not give order expected ...
+
+           across(month_at_zero, as.integer),
+          ) %>%
+
+    ggplot(aes(Location, monthOfYear, colour = LocalAuthority, text = tooltip)) +
+        geom_point(aes(fill = LocalAuthority, alpha = proportion_reporting), size = 1.2, shape = 21) +
+        geom_point(aes(alpha = (1 - month_at_zero)), size = 1.2, shape = 21) + # ensure outline shows for most faded
+        geom_point(aes(alpha = month_at_zero), #(month_at_zero * (1 - proportion_reporting))),
+                       size = 2, shape = 8) + 
+        guides(alpha = "none", shape = "none") +
+        cop_cycling_theme +
+        theme(axis.text.y = element_text(size = 11), # misaliged set here - angle = 30), #, hjust = -1, margin = margin(b = -5)),
+              axis.text.x = element_text(size = 9),
+              plot.title = element_text(size = 22, face = "bold"),
+              legend.position = "bottom"
+             ) +
+        guides(x = guide_axis(angle = 45)) +
+        ylab("") + xlab("") +
+        #scale_x_date("", breaks = seq(min(datebreaks$monthOfYear), max(datebreaks$monthOfYear), by = "2 months"),
+        #             labels = scales::date_format("%b-%Y"), expand = expansion(mult = .02)) +
+        scale_x_discrete(position = "top", expand = expansion(mult = c(.005, 0.025))) +
+
+        khroma::scale_colour_romaO(discrete = TRUE) +
+        khroma::scale_fill_romaO(discrete = TRUE)
+
+plot_tmp <- convertToPlotly(plot1, height = 1200, width = 3000,
+                xaxis = list(tickfont = tickFont, title = list(font = list(size = 16)), tickangle = -45, side = "top"),
+                yaxis = list(tickfont = tickFont, title = list(font = list(size = 14))), #orientation = "h",
+                legend = list(font = list(size = 11), title = list(text = "Local Authority", font = list(size = 14)),
+                              tracegroupgap = 1),
+                )
+
+for (i in seq_along(plot_tmp$x$data)) {
+
+    current_trace <- plot_tmp$x$data[[i]]$name
+
+    if (str_detect(current_trace, "\\d"))
+        plot_tmp$x$data[[i]]$showlegend <- FALSE
+
+    plot_tmp$x$data[[i]]$legendgroup <- la_labels[which(str_detect(current_trace, la_labels))]
+}
+
+plot_tmp
+rm(plot1, la_labels)
+
+
+          
 ## ---- filtered_data_counts_time_of_day_by_year_and_weekday --------
 
-filtered_data <-  padding_cycle_counter_data_from_2017 %>%
+filtered_data <- padding_cycle_counter_data_from_2017 %>%
     full_join(as.data.frame(levels(cycle_counter_data_from_2017$Provider)),
                   by = character()) %>%
     full_join(as.data.frame(levels(cycle_counter_data_from_2017$traffic_mode)),
@@ -435,31 +905,31 @@ filtered_data <-  padding_cycle_counter_data_from_2017 %>%
     full_join(cycle_counter_data_from_2017 %>%
         filter(traffic_mode == "bicycle") %>%
         group_by(Provider, traffic_mode, year, weekday, isWeekEnd, time) %>%
-        summarise(average = mean(count, na.rm = TRUE), 
+        summarise(average = mean(count, na.rm = TRUE),
                   count = sum(count, na.rm = TRUE)
                  )) %>%
 
-    
+
         mutate(weekday = factor(weekday, levels = levels(wday(1, label = TRUE)))) %>%
         mutate(isWeekEnd = (as.integer(weekday) %in% c(1, 7))) %>% #between(as.integer(weekday), 6, 7)) %>%
         relocate(isWeekEnd, .after = "weekday") %>%
 
-        mutate_at(vars(year), as.ordered) %>%
-        mutate_at(vars(Provider, traffic_mode, time), as.factor) %>%
-        mutate_at(vars(Provider), ~ fct_relevel(., default_provider)) %>%
-        mutate_at(vars(Provider), ~ fct_relevel(., "John Muir Way", after = Inf)) %>%
+        mutate(across(year, as.ordered),
+               across(c(Provider, traffic_mode, time), as.factor),
+               across(Provider, ~ fct_relevel(., default_provider)),
+               across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
+                                              "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
 
-        mutate(pseudo_point = if_else(is.na(average), 0, 1),
-               tooltip = if_else((pseudo_point == 0), 
-                                 "", 
-                                 paste(Provider, "- in", year, "on average", round(average, 2), paste0(traffic_mode, "s"), 
-                                       weekday, time, "-", end_time))
+               pseudo_point = if_else(is.na(average), 0, 1),
+               tooltip = if_else((pseudo_point == 0),
+                                 "",
+                                 paste(Provider, "- in", year, "on average", round(average, 2), paste0(traffic_mode, "s"),
+                                       weekday, time, "-", end_time)),
+               across(c(count, pseudo_point), as.integer),
+               across(c(average, count), ~ replace_na(., -Inf))
+               )
 
-                   ) %>%
-        mutate_at(vars(count, pseudo_point), as.integer) %>%
-        mutate_at(vars(average, count), ~ replace_na(., -Inf))
-
-
+               
 providers <- levels(filtered_data$Provider)
 years <- levels(filtered_data$year)
 weekdays <- levels(filtered_data$weekday)
@@ -655,28 +1125,29 @@ filtered_data <-  padding_cycle_counter_data_from_2017 %>%
     full_join(cycle_counter_data_from_2017 %>%
         filter(traffic_mode == "bicycle") %>%
         group_by(Provider, traffic_mode, year, month, time) %>%
-        summarise(average = mean(count, na.rm = TRUE), 
+        summarise(average = mean(count, na.rm = TRUE),
                   count = sum(count, na.rm = TRUE)
                  )) %>%
 
         mutate(end_time = format(as_datetime(time, format = "%H:%M") + hours(1), format = "%H:%M")) %>%
         relocate(end_time, .after = time) %>%
 
-        mutate(month = factor(month, levels = month.abb)) %>%
-        mutate_at(vars(year), as.ordered) %>%
-        mutate_at(vars(Provider, traffic_mode, time), as.factor) %>%
-        mutate_at(vars(Provider), ~ fct_relevel(., default_provider)) %>%
-        mutate_at(vars(Provider), ~ fct_relevel(., "John Muir Way", after = Inf)) %>%
+        mutate(month = factor(month, levels = month.abb),
+               across(year, as.ordered),
+               across(c(Provider, traffic_mode, time), as.factor),
+               across(Provider, ~ fct_relevel(., default_provider)),
+               across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
+                                              "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
 
-        mutate(pseudo_point = if_else(is.na(average), 0, 1),
-               tooltip = if_else((pseudo_point == 0), 
-                                 "", 
-                                 paste(Provider, "-", month, year, 
-                                       "\nOn average", round(average, 2), paste0(traffic_mode, "s,"), time, "-", end_time, 
-                                       "\nTotal count:", formatNumber(count)))
-                   ) %>%
-        mutate_at(vars(count, pseudo_point), as.integer) %>%
-        mutate_at(vars(average, count), ~ replace_na(., -Inf)) 
+               pseudo_point = if_else(is.na(average), 0, 1),
+               tooltip = if_else((pseudo_point == 0),
+                                 "",
+                                 paste(Provider, "-", month, year,
+                                       "\nOn average", round(average, 2), paste0(traffic_mode, "s,"), time, "-", end_time,
+                                       "\nTotal count:", formatNumber(count))),
+               across(c(count, pseudo_point), as.integer),
+               across(c(average, count), ~ replace_na(., -Inf))
+              )
 
 
 providers <- levels(filtered_data$Provider)
