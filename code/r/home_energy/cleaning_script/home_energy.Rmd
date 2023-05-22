@@ -1,54 +1,65 @@
 ---
-title: "Home Energy"
+title: Home Energy Cleaning Script
 output: html_notebook
 editor_options: 
   chunk_output_type: console
 ---
 
-#Data Zone 2001 Lookup Codes Dataset:- https://www.opendata.nhs.scot/dataset/geography-codes-and-labels/resource/e92d19d4-ced7-40c8-b628-e28e4528fc41
+#Local Authority and postcode Lookup Datasets:- 
+#https://www.nrscotland.gov.uk/statistics-and-data/geography/our-products/scottish-postcode-directory/2022-2
+#https://statistics.gov.scot/data/data-zone-lookup
 
 #Domestic Energy Performance Certificates Data:- http://statistics.gov.scot/data/domestic-energy-performance-certificates
 
 ```{r}
-library(shiny)
-library(shinydashboard)
 library(tidyverse)
-library(sf)
 library(here)
-library(scales)
-library(leaflet)
-library(htmltools)
 library(janitor)
-library(SPARQL)
-library(readr)
 ```
 
 ```{r}
-#data zone lookup file
-zone_lookup <- read_csv(here("raw_data/datazone_lookup.csv")) %>% clean_names()
+#Postcode lookup file
+postcode_lookup <- read_csv(here("raw_data/nrs_spd_postcode_index_22-2.csv")) %>% clean_names()
 ```
 
 ```{r}
-zone_lookup_clean <- zone_lookup %>% 
-  select(data_zone, ca_name, ca)
+postcode_lookup <- postcode_lookup %>% 
+  select(postcode, council_area2019code)
+
+#remove duplicated postcodes - ones that span 2 Local Authorities, just use the first
+postcode_lookup <- postcode_lookup[!duplicated(postcode_lookup$postcode),]
+
+colnames(postcode_lookup)[colnames(postcode_lookup) == 'council_area2019code'] <- 'la_code'
+
+```
+
+```{r}
+#Local Authority lookup file
+la_lookup <- read_csv(here("raw_data/DataZone2011lookup_2022-05-31.csv")) %>% clean_names()
+```
+
+```{r}
+la_lookup <- la_lookup %>% 
+  select(la_code, la_name) %>%
+  distinct()
+
 ```
 
 # identify number of extract csv files in directory
 ```{r}
-#the pattern matches the latest downloaded data file
-setwd("raw_data")
-fils <- list.files(pattern = "*_0721.csv")
+#the pattern looks for the Q to identify the quarterly reports
+fils <- list.files(pattern = "Q")
 no_of_files <- length(fils)
 ```
 
-# converting files to utf-8
+# converting csv files to utf-8 to stop an error when trying to work with the dataframe
 ```{r}
 for (val in fils)
 {
 #make sure all files are UTF-8
 temp_file <- read.csv(val)
 write.csv(temp_file, val, fileEncoding = "UTF-8")
-file.remove(temp_file)
+rm(temp_file)
 }
 ```
 
@@ -61,36 +72,40 @@ for (i in 1:length(fils))
 #Read in each csv file in the folder
     tmp_df <- read.csv(fils[i])
     
-#removing first row (headers) create temp df, remove first row, make column names lower case
+#set the correct headers, removing first row of headers create temp df, remove first row, make column names lower case
+    names(tmp_df) <- tmp_df[1,]
     tmp_df <- tmp_df[-1,]
     tmp_df <- tmp_df %>% 
     clean_names()
-#clean problem names from the conversion of the squared character
+#clean problem names from the conversion of the squared character - they seem to change every quarter
+    colnames(tmp_df)[colnames(tmp_df) == 'primary_energy_indicator_k_wh_m_af_ae_af_a_a2_year'] <- 'primary_energy_indicator_k_wh_m2_year'
     colnames(tmp_df)[colnames(tmp_df) == 'primary_energy_indicator_k_wh_m_a_a2_year'] <- 'primary_energy_indicator_k_wh_m2_year'
+    colnames(tmp_df)[colnames(tmp_df) == 'total_floor_area_m_af_ae_af_a_a2'] <- 'total_floor_area_m2'
     colnames(tmp_df)[colnames(tmp_df) == 'total_floor_area_m_a_a2'] <- 'total_floor_area_m2'
+    colnames(tmp_df)[colnames(tmp_df) == 'co2_emissions_current_per_floor_area_kg_co2_m_af_ae_af_a_a2_yr'] <- 'co2_emissions_current_per_floor_area_kg_co2_m2_yr'
     colnames(tmp_df)[colnames(tmp_df) == 'co2_emissions_current_per_floor_area_kg_co2_m_a_a2_yr'] <- 'co2_emissions_current_per_floor_area_kg_co2_m2_yr'
+    
+    colnames(tmp_df)
     
 #keeping relevant columns    
     tmp_df <- tmp_df  %>%
-    select(property_uprn, address1, address2, post_town, postcode, date_of_assessment, primary_energy_indicator_k_wh_m2_year, total_floor_area_m2, current_energy_efficiency_rating, current_energy_efficiency_rating_band, potential_energy_efficiency_rating, potential_energy_efficiency_rating_band, co2_emissions_current_per_floor_area_kg_co2_m2_yr, current_emissions_t_co2_yr, potential_reduction_in_emissions_t_co2_yr, data_zone, tenure, quarterly_report) %>%
+    select(osg_uprn, address1, address2, post_town, postcode, date_of_assessment, type_of_assessment, energy_consumption_potential, primary_energy_indicator_k_wh_m2_year, total_floor_area_m2, current_energy_efficiency_rating, current_energy_efficiency_rating_band, potential_energy_efficiency_rating, potential_energy_efficiency_rating_band, co2_emissions_current_per_floor_area_kg_co2_m2_yr, current_emissions_t_co2_yr, potential_reduction_in_emissions_t_co2_yr, tenure, data_zone_2011, local_authority,
+built_form, property_type, current_energy_efficiency_rating, current_energy_efficiency_rating_band, potential_energy_efficiency_rating,
+potential_energy_efficiency_rating_band, main_heating_1_fuel_type, windows_description) %>%
     
 #removing missing values from specific columns
-  drop_na(co2_emissions_current_per_floor_area_kg_co2_m2_yr, data_zone)
+  drop_na(co2_emissions_current_per_floor_area_kg_co2_m2_yr)
     
-#Checking for missing values across all columns
-tmp_df %>% 
-  summarise(across(.fns = ~sum(is.na(.x))))
-
-# Extracting S01 code
-tmp_df$data_zone <- str_extract(tmp_df$data_zone, "[Ss][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]")
-
-# capturing which report each assessment comes from
+# Extracting just the S01 code for the data zone
+tmp_df$data_zone_2011 <- str_extract(tmp_df$data_zone_2011, "[Ss][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]")
+    
+# adding which report each assessment comes from - just to help with data problem diagnosis
 tmp_df$quarterly_report = fils[i]
 
 # Converting from string to date
 tmp_df$date_of_assessment <- as.Date(tmp_df$date_of_assessment, format="%Y-%m-%d")
 
-# extracting the date in to bits
+# extracting the date in to YMD
 tmp_df$year_of_assessment <- as.numeric(format(tmp_df$date_of_assessment, "%Y"))
 tmp_df$month_of_assessment <- as.numeric(format(tmp_df$date_of_assessment, "%m"))
 tmp_df$day_of_assessment <- as.numeric(format(tmp_df$date_of_assessment, "%d"))
@@ -106,6 +121,16 @@ home_energy <- rbind.data.frame(home_energy, tmp_df)
 
 }
 
+```
+
+#converting town names to lower case to reduce multiple instances of the same town
+```{r}
+home_energy$post_town = tolower(home_energy$post_town)
+```
+
+#removing rogue white spaces from town names
+```{r}
+home_energy$post_town = str_trim(home_energy$post_town)
 ```
 
 #Hard coding to clean some town names
@@ -128,16 +153,17 @@ home_energy <- home_energy %>%
   )
 ```
 
-#converting town names to lower case to reduce multiple instances of the same town
+#Hard coding to update some Local Authority Names
 ```{r}
-	home_energy$post_town = tolower(home_energy$post_town)
-```
 
-#removing rogue white spaces from town names
-```{r}
-home_energy$post_town = str_trim(home_energy$post_town)
+home_energy <- home_energy %>% 
+  mutate(
+    local_authority = if_else(local_authority == "Edinburgh City", "City of Edinburgh", local_authority),
+    local_authority = if_else(local_authority == "Eilean Siar", "Na h-Eileanan Siar", local_authority),
+    local_authority = if_else(local_authority == "00EM", "", local_authority),
+    local_authority = if_else(local_authority == "16UD", "", local_authority)
+  )
 ```
-
 #Hard coding to fix some bad dates
 ```{r}
 
@@ -167,6 +193,7 @@ home_energy <- home_energy %>%
     year_of_assessment = if_else(year_of_assessment == "16", "2016", year_of_assessment),
     year_of_assessment = if_else(year_of_assessment == "21", "2021", year_of_assessment),
     year_of_assessment = if_else(year_of_assessment == "213", "2013", year_of_assessment),
+    year_of_assessment = if_else(year_of_assessment == "222", "2022", year_of_assessment),
     year_of_assessment = if_else(year_of_assessment == "1970", "2016", year_of_assessment),
     year_of_assessment = if_else(year_of_assessment == "2002", "2021", year_of_assessment),
     year_of_assessment = if_else(year_of_assessment == "2103", "2013", year_of_assessment),
@@ -176,26 +203,46 @@ home_energy$year_of_assessment <- as.numeric(home_energy$year_of_assessment)
 
 ```
 
-#calculating the future CO2 emmissions
+#calculating the future CO2 emissions - remove negative potential figures - if improvements are done the emissions would get worse
 ```{r}
+	home_energy_negative_potential <- home_energy %>%
+  filter(potential_reduction_in_emissions_t_co2_yr < 0)
+
+home_energy$total_floor_area_m2 <- as.numeric(home_energy$total_floor_area_m2)
+
 	home_energy <- home_energy %>%
-  mutate(future_emmissions = (current_emissions_t_co2_yr - potential_reduction_in_emissions_t_co2_yr))
+	  filter(potential_reduction_in_emissions_t_co2_yr > 0) %>%
+  mutate(future_emissions = (current_emissions_t_co2_yr - potential_reduction_in_emissions_t_co2_yr),
+         future_emissions_floor_area_kg_co2_m2_yr = (future_emissions / total_floor_area_m2)*1000
+         )
+	
 ```
 
-#Joining with datazone_lookup
+#Joining with postcode_lookup to get la code - joining with la lookup to get the la name, also listing where the postcode does not match
+#the local authority field in the data is often not completed - only use it where postcode is not found
 ```{r}
+
 home_energy_zone <- home_energy %>% 
-  left_join(zone_lookup_clean, by = "data_zone")
-```
+  left_join(postcode_lookup, by = "postcode")
 
-```{r}
-home_energy_zone %>% 
-  summarise(across(.fns = ~sum(is.na(.x))))
-```
+home_energy_zone_postcode_fail <- home_energy %>% 
+  anti_join(postcode_lookup, by = "postcode")
 
-```{r}
+home_energy_zone <- home_energy_zone %>%
+  left_join(la_lookup, by = "la_code")
+
+#Where postcode did not find a local authority use the one on the record
 home_energy_zone <- home_energy_zone %>% 
-  drop_na(data_zone)
+  mutate(
+    la_name = if_else(is.na(la_name), local_authority, la_name)
+  )
+#remove any not found
+home_energy_zone <- home_energy_zone %>% 
+  filter(la_name != "")
+
+#remove duplicates - there should not be any but 32 were found last time checked
+home_energy_zone <- unique(home_energy_zone)
+
 ```
 
 #Writing to csv
