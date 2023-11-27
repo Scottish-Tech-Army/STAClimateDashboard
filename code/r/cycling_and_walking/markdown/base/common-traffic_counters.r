@@ -6,6 +6,8 @@ source("base/common.r")
 
 label_all_bicycle_providers <- "All Bicycle Counters" #Data Providers"
 default_provider <- "National Monitoring Framework (CS)"
+named_route_providers <- c("North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
+                           "South West Trunk Roads", "Sustrans", "John Muir Way")
 
 transportation_modes <- c("Car" = "Car", "Taxi" = "Taxi", "LGV" = "LGV", "HGV" = "HGV", "ServiceBus" = "Service Bus", "Coach" = "Coach", "MCycle" = "Motorcycle", "Cyclist" = "Bicycle", "Pedestrian" = "Pedestrian")
 
@@ -223,7 +225,12 @@ getMetadataFromJson <-
 
 loadAndParseMeteoData <-
     function(dataFile, region, metric, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
-    
+      
+        if (!is.null(startDateFilter))
+            startDateFilter <- floor_date(startDateFilter, unit = "month")
+        if (!is.null(endDateFilter))
+            endDateFilter <- ceiling_date(endDateFilter, unit = "month") - 1
+            
         historical_weather <- read_table(dataFile) %>%
                                 filter(rowSums(is.na(.)) != ncol(.))
 
@@ -270,6 +277,11 @@ loadAndParseMeteoData <-
 
 loadAndParseMeteoStationData <-
     function(dataFile, region, weather_station, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
+    
+        if (!is.null(startDateFilter))
+            startDateFilter <- floor_date(startDateFilter, unit = "month")
+        if (!is.null(endDateFilter))
+            endDateFilter <- ceiling_date(endDateFilter, unit = "month") - 1
     
         historical_weather <- read_table(dataFile) %>%
                                 filter(rowSums(is.na(.)) != ncol(.))
@@ -345,9 +357,7 @@ parseMeteoDataFromDB <-
             glimpse(historicalWeatherData)
         
         invisible(historicalWeatherData)
-
 }
-
 
 
 

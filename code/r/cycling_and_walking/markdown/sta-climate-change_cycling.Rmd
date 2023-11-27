@@ -12,8 +12,8 @@ output:
     social: menu
  #   source_code: embed
     
- #   self_contained: false
- #   lib_dir: libs
+    self_contained: false
+    lib_dir: libs
     
 ---
 
@@ -62,6 +62,10 @@ output:
     /* margin-top: 20px; */
   }
 
+  .retain_default_cursor {
+    cursor:default;
+  }
+
 ```
 
 ```{r global-options, include = FALSE, cache = FALSE}
@@ -85,7 +89,7 @@ source("base/common_interaction.r")
 #library(DBI)
 
 #library(plotly)
-library(crosstalk)
+#library(crosstalk) # no longer in use
 library(RColorBrewer)
 
 library(knitr)
@@ -115,7 +119,7 @@ Row {data-height=45}
 ### Active travel data across Scotland from `r format(start_date, "%b %Y") ` to `r format(end_date, "%b %Y") `.
 
 
-Column {data-height=800}
+Column {data-height=620}
 -----------------------------------------------------------------------
 
 ```{r, bicycle_counts_summaries}
@@ -134,7 +138,6 @@ Column {data-height=800}
 ```
 
 
-
 Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
@@ -142,21 +145,30 @@ Row {.tabset .tabset-fade}
 
 #### Cycling Scotland's National Monitoring Framework (NMF) Counters
 
-```{r, summary_tables_nmf, results = 'asis'}
+```{r, summary_tables_nmf_totals, results = 'asis'}
+```
+
+```{r, summary_tables_nmf_average_by_counter, results = 'asis'}
+```
+
+```{r, summary_tables_nmf_averages, results = 'asis'}
+```
+
+```{r, summary_tables_nmf_hourly_averages, results = 'asis'}
 ```
 
 ```{=html}
 <p>&nbsp;<br />
-Focusing on the NMF counters, at end `r format(end_date, "%b %Y") ` approximately <b>`r nmf_count_summaries["bicycle"] ` bikes</b> and <b>`r nmf_count_summaries["pedestrian"] ` pedestrians</b> had been recorded going past all counters.
+Focusing on the NMF &dash; National Monitoring Framework &dash; counters, at end `r format(end_date, "%b %Y") ` approximately <b>`r nmf_count_summaries["bicycle"] ` bikes</b> and <b>`r nmf_count_summaries["pedestrian"] ` pedestrians</b> had been recorded going past all counters.
 Average count per day dropped in 2018 for both types of counters before starting to rise again. Looking at counts overall, <b>cycling peaked in May 2020</b>, two months after the first COVID-19 lockdown was imposed, then continued to drop after plateauing over the summer. Despite further restrictions <b>in 2021 cycling counts dropped overall</b>, even with higher counts than seen over the summer months in 2020. Counts then started to drop after the highest peak to date, including also non-NMF counters, in Aug (2021) to the lowest counts recorded for 2021 in Dec, even with an increase in counters across the country.
 <!-- This may be weather-related; icy weather at the start of 2021 and unusually cold weather and even snow in May saw very low counts, while higher counts were seen over the warmer summer months than were recorded in 2020. --><br />
  <b>Walking, overall, continued to rise in 2021.</b> But even this started to decrease in April, and by June had dropped below the same month in 2020. However, both cycling and walking started to rise again in Jul 2021, both over the 2020 figures, but then started to fall again in Aug. Walking rose in Sep before starting to fall again in Oct, and as for cycling, to its lowest count in 2021 in Dec.<br />
- <b>Both walking and cycling dropped in 2022, compared to 2021</b>
+ <b>Both walking and cycling dropped in 2022, compared to 2021.</b>
 </p>
 <p>&nbsp;<br />
 
 <p>
-The data now also includes council-managed counters, Sustrans counters on the Natioanal Cycle NETWORK (NCN) and along key points on trunk roads. Five counters along the John Muir Way, located around the west, central belt are also included in the data reported.
+The data now also includes council-managed counters, Sustrans counters on the National Cycle Network (NCN), and counters along key points on trunk roads. Five counters along the John Muir Way, located around the west, central belt are also included in the data reported.
 It should be noted that the much larger number of counters in the two largest cities, Glasgow and the particularly dense network in Edinburgh, skew the data especially when looking at totals. We therefore compare data across location and time using predominantly average and/or median counts (across locations and/or counters).
 </p><p>
 
@@ -168,27 +180,18 @@ It should be noted that the much larger number of counters in the two largest ci
 ```
 
 
-#### Council Counters &amp; the John Muir Way
+#### Non-NMF Counters
 
-```{r, summary_tables_councils, results = 'asis'}
+```{r, summary_tables_councils_totals, results = 'asis'}
 ```
 
-
-### Counter Locations
-
-####
-```{=html}
-<p>
-  Counters ...
-</p>
+```{r, summary_tables_councils_average_by_counter, results = 'asis'}
 ```
 
-####
-
-```{r, counters_reporting}
+```{r, summary_tables_councils_averages, results = 'asis'}
 ```
 
-```{r, counters_reporting_plotly, fig.height = 8, fig.width = 20}
+```{r, summary_tables_councils_hourly_averages, results = 'asis'}
 ```
 
 
@@ -248,46 +251,11 @@ Column {.tabset .tabset-fade}
 
 ### By Year
 
-```{r, average_count_by_location_and_year}
+```{r, median_count_by_location_and_year}
 ```
 ### By Month
 
-```{r, average_count_by_siteID_location_and_month}
-```
-
-
-As the Seasons Change {data-navmenu="Exploring the Data"}
-=======================================================================
-
-Row {.tabset .tabset-fade}
------------------------------------------------------------------------
-
-### Monthly Counts per Location
-
-#### Monthly Totals - As the Seasons Change
-
-```{r, total_count_by_location_and_month}
-```
-
-```{=html}
-  <p>&nbsp;<br /></p>
-```
-
----
-
-#### Rainfall Patterns (mm) - Scotland
-
-```{r, historical_weather_scotland_rainfall}
-```
-
-#### Temperature Patterns (C) - Scotland
-
-```{r, historical_weather_scotland_temp}
-```
-
-### Changes in Counts by Year
-
-```{r, total_count_by_location_grouped_by_year}
+```{r, median_count_by_siteID_location_and_month}
 ```
 
 
@@ -316,103 +284,130 @@ Any or all of day of the week, time of day and month in the year, and recent wea
 ```
 
 
+Counter Locations {data-navmenu="Data Stories"}
+=======================================================================
+
+>The timeline shows when bicycle counters came online in each location, and consistency in reporting from that point, with the most recent month at the top. Location is ordered from left to right by (highest) consistency in reporting (count greater than 0 each month). Mouse over icons in the plot to show detail or to identify points when all or no counters were reporting across each location (using the drop-down).
+
+
+### Bicycle Counters &ndash; Reporting over Time
+
+```{r, counters_reporting}
+```
+
+####
+
+```{=html}
+  <p></p>
+
+```
+
+<div class="retain_default_cursor">
+
+```{r, counters_reporting_plotly, fig.height = 8, fig.width = 20}
+```
+
+</div>
+
+
+What is Changing? {data-navmenu="Data Stories"}
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### What is changing &ndash; Counters reporting or Cycling
+
+####
+```{=html}
+<p>
+  Comparing trends for totals (and averages) to median counts highlights locations where density (of cyclists and/or counters) varies significantly. In such cases median counts are more representative of cycling trends in a location over time, taking into account increase in reporting (and totals) due to introduction of new counters, as well as decrease due to counters not reporting data (e.g., Edinburgh in Aug 2019 and from Oct 2021, Sustrans in Jun 2019 and Perth &amp; Kinross in Dec 2021).
+</p>
+```
+
+####
+
+```{r, bicycle_counters_typical_counts_daily}
+```
+
+```{=html}
+  &nbsp;
+
+```
+
+
+Cycling as the Seasons Change {data-navmenu="Data Stories"}
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Cycle Counts by Location and Counter &ndash; As the Seasons Change
+
+```{r, total_count_by_location_and_month}
+
+```
+
+####
+
+```{=html}
+  <br />&nbsp;
+
+```
+
+####
+
+```{r, cycling_as_the_seasons_change}
+```
+
+```{=html}
+  <br />&nbsp;
+
+```
+
+### Changes in Counts by Year
+
+```{r, total_count_by_location_grouped_by_year}
+```
+
+
 Lerwick &ndash; Change through the Seasons {data-navmenu="Data Stories"}
 =======================================================================
 
 Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
-### Lerwick &ndash; Change through the Seasons
+### Lerwick, Shetland &ndash; Change through the Seasons
 
-#### Monthly Totals - As the Seasons Change
+```{r, counts_by_location_and_month_lerwick}
+```
 
-```{r, total_count_by_location_and_month_lerwick}
+####
+
+```{r, cycling_as_the_seasons_change_lerwick}
 ```
 
 ```{=html}
-  <p>&nbsp;<br />"</p>
-```
----
+  <br />&nbsp;
 
-
-#### Rainfall Patterns (mm) - Lerwick, Shetland
-
-```{r, historical_weather_lerwick_rainfall}
 ```
 
-#### Temperature Patterns (C) - Lerwick, Shetland
-
-```{r, historical_weather_lerwick_temp}
-```
-
-`r rm(counter_start, roadNames) `
+`r rm(roadNames) `
 
 
 
 About
 =======================================================================
 
-
-```{=html}
-<p>&nbsp;<br />
-<!-- A summary sheet may be downloaded &ndash; <a href="cycle_counters_info_cards.pdf">cycle_counters_info_cards.pdf</a -->
-
-<h3>About the Visualisations</h3>
-
-<p>
-Starting with the installation of 11 bicycle and pedestrian counters by Cycling Scotland's National Monitoring Framework (NMF) in a number of counties predominantly in west, central Scotland, from `r format(start_date, "%b %Y") ` and through to `r format(end_date, "%b %Y") `. The 63rd counter was installed in Fort William in the Highlands in Aug 2021, and a further three in Edinburgh in Jun and Jul 2021. <br />
-The snapshots now also include data from more dense networks of council-managed counters and some points along the John Muir Way. Some councils manage counters outwith their geographical or administrative boundaries; for instance, the City of Edinburgh Council also provides counts for Dalkeith (Midlothian). Where more than one filter is used, the charts will always group (or order) first by location (e.g., hamlet, village, town or city), then local authority, then data provider.<br />
-Pedestrian count data is currently available only from NMF Counters. Summaries are shown in the overview section.
-</p>
-
-<p>
-Most of the charts are interactive. Mousing over data points will display tooltips with more detail. Click/double-click on legend items to filter data sub-sets. Most charts support zoom in by drawing a rectangle around a region of interest; double-click in empty space to return to the full view or choose reset axes from the toolbar. Alternatively, use the toolbar on the top, right, to interact with each chart.
-</p><p>
-Charts directly <a href="#variation-across-locations">comparing detail by location</a> use a <a href="https://www.investopedia.com/ask/answers/05/logvslinear.asp" title="Investopedia provide a good description of why you would use a log scale." target = "_blank">log scale (rather than linear/arithmetic)</a> because of the very large differences in counts (and counters) across locations. For instance, Edinburgh and Glasgow had ab out 40 counters each by 2018, and as at mid 2021, 57 and 75 counters respectively. Being the second and first largest (cities) by population, and Edinburgh being especially dense, directly comparing counts to all other locations dwarfs all other data, including even Stirling and Dundee &ndash; we obtain <a href="images/linear_plot_count_by_location.png" title="Why we use a log instead of a linear plot to compare counts across locations" target = "_linear_plot" >plots with most of the data sitting in the bottom, left-hand corner</a>.
-</p>
-
-
-<h3>Counter Locations</h3>
-
-<p>In the overview section we list all counters &ndash; NMF and council-managed, showing installation dates and count per location. It should be noted that there is some delay between counter installation and the point from which data is recorded. Counters that came online within the last month or two may therefore not have any data reported in charts shown. Occasionally, also, a counter may go out of action temporarily and sometimes for significant periods of time.
-</p>
-
-
-<h3>Data Sources</h3>
-
-<p>
-Counter data may be accessed via Cycling Scotland's <a href = "https://usmart.io/org/cyclingscotland/" target = "_blank">Active Travel Open Data Portal</a>. The data feeding into this analysis is updated shortly after the end of each month, to allow for any delays in data reporting.
-</p>
-
-<p>
-All data feeding into this analysis is extracted at the level of detail of hourly counts by counter, and then aggregated as required. Data may be accessed via the API; this requires registration and request of an API key. Alternatively, a <!-- a href= "https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/7ffbe5d6-fa13-4352-829d-0bb0a58e3355" target = "_blank" -->dump may be downloaded<!-- /a --> from the portal.<br />
- The data is updated on a monthly basis, with a slight delay to allow all counters to report data.
-</p>
-
-<!--
-City of Edinburgh Council - Daily cycling counts from automatic cycling counters
-https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/b1f0bd42-e220-465e-99a3-c4f62824f21f
-
-National Monitoring Framework - all-mode traffic survey results 2017 to 2021 - Cycling Scotland
-https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/b9fdd462-1f45-4252-aedc-fbc596abcd90
-
-NOTE TO SELF - PUT NMF ABOUT PEDESTRIAN AND ALSO EXPLANATIONS ABOUT CALCULATIONS
--->
-<br />
-
-<!-- h3>Weather Data</h3 -->
-<p>
-<a href = "https://www.metoffice.gov.uk/research/climate/maps-and-data/uk-and-regional-series" target = "_blank">Historical weather pattern data</a> was obtained from the Met Office.
-
-</p>
-
+```{r, child = c("about.Rmd")}
 ```
+
 
 
 ```{r}
 # cleanup ...
 
-dbDisconnect(dbConn)
+#dbDisconnect(dbConn)
 #dbConn
 
 ```

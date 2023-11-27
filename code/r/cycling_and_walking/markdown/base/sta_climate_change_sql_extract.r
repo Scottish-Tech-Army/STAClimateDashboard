@@ -42,8 +42,7 @@ non_nmf_counter_metadata <- dbGetQuery(dbConn, "SELECT * FROM non_nmf_counter_lo
 non_nmf_counter_metadata <- non_nmf_counter_metadata %>%
     mutate(across(c(start_date, end_date, ends_with("Counter")), as_date),
            across(c(Provider, siteID, site, LocalAuthority, Location, RoadName, RoadType), as.factor),
-           across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
-                                          "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
+           across(Provider, ~ fct_relevel(., named_route_providers, after = Inf)),
            ) 
 
 reporting_sites <- reporting_sites %>%
@@ -57,8 +56,7 @@ reporting_sites <- reporting_sites %>%
     mutate(across(siteID, ~ coalesce(., externalId)),
            across(c(siteID, status, site, externalId, LocalAuthority, Location, RoadType, Provider), as.factor),
            across(Provider, ~ fct_relevel(., default_provider)),
-           across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
-                                          "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
+           across(Provider, ~ fct_relevel(., named_route_providers, after = Inf)),
            ) #%>%
 
     # interim to deal with issues with Glasgow spike in Jan 2022
@@ -200,8 +198,7 @@ cycle_counter_data_from_2017 <- cycle_counter_data_from_2017 %>%
 
     mutate(across(time, as.factor),
            across(Provider, ~ fct_relevel(., default_provider)),
-           across(Provider, ~ fct_relevel(., "North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
-                                          "South West Trunk Roads", "Sustrans", "John Muir Way", after = Inf)),
+           across(Provider, ~ fct_relevel(., named_route_providers, after = Inf)),
           )
 
 
@@ -210,7 +207,6 @@ historical_weather_scotland_from_2017 <- dbGetQuery(dbConn, "SELECT * FROM histo
     parseMeteoDataFromDB()
 
 #dbDisconnect(dbConn)
-
 
 
 

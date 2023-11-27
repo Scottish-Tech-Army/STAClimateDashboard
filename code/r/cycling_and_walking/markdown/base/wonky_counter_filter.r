@@ -141,7 +141,7 @@ counter_filter_zero_daily_counts <- counter_filter_zero_daily_counts %>%
 
     left_join(counter_filter_zero_daily_counts %>%
                 group_by(site, siteID, monthOfYear, days_at_zero) %>%
-                summarise(days_in_month = days_in_month(date),
+                reframe(days_in_month = days_in_month(date),
                           days_at_zero_per_month = n(),
                           month_at_zero = (days_at_zero_per_month == days_in_month),
                           ) %>%

@@ -34,6 +34,8 @@ weather_metrics_colour_scheme <- c("min_temp" = as.character(colour("high contra
 
 tickFont <- list(family = "Arial, sans-serif", size = 12)
 
+excel_date_origin <- "1899-12-30"
+
 
 
 renameTraces <- 
@@ -117,6 +119,9 @@ convertToPlotly <-
 
 
 create_plotly_control_buttons <- function(arg_label, values, update_method = NULL) {
+  
+    if (is_null(update_method))
+        method <- "restyle"
     
     lapply(
         values,
@@ -124,7 +129,7 @@ create_plotly_control_buttons <- function(arg_label, values, update_method = NUL
         FUN = function(value, arg_label) {
 
           button <- list(
-            method = if_else(is_null(update_method), "restyle", update_method),
+            method = method,
             args = list(arg_label, value),
             label = sprintf("%s", value)
           )
