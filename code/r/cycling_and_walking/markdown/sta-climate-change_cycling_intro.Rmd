@@ -1,0 +1,175 @@
+---
+title: "STA Climate Change &ndash; Cycling"
+output:
+#  html_document:
+#    toc: true
+#    toc_depth: 3
+#    toc_float: true
+    
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    theme: bootstrap
+    social: menu
+ #   source_code: embed
+    
+    self_contained: false
+    lib_dir: libs
+    
+---
+
+<style>
+  table {
+    border-bottom: 1px solid #333;
+  }
+</style>
+
+
+```{css, echo = FALSE}
+
+  .retain_default_cursor {
+    cursor:default;
+  }
+
+```
+
+```{r global-options, include = FALSE, cache = FALSE}
+
+knitr::opts_chunk$set(out.width = '100%', out.height = '100%', fig.align = 'left',
+                      echo = FALSE, warning = FALSE, message = FALSE)
+
+# fig.dim = c(12, 5),
+
+```
+
+```{r libraries_and_utilities}
+
+source("base/common-traffic_counters.r")
+source("base/common_interaction.r")
+
+## the following libraries called in sourced base files
+#library(tidyverse)
+#library(lubridate)
+##library(ggtext)
+#library(DBI)
+
+#library(plotly)
+library(RColorBrewer)
+
+library(knitr)
+library(kableExtra)
+
+
+# utilities & c.
+
+knitr::read_chunk("base/cycle_counters_interactive.r")
+
+```
+
+```{r sqa_data_extraction, cache.lazy = FALSE}
+
+#source("base/sta_climate_change_sql_extract.r", local = knitr::knit_global())
+load("cycling_datasets.Rdata")  #interim - querying and parsing from scratch
+source("base/sta_climate_change_data_parsing.r", local = knitr::knit_global())
+```
+
+
+Overview 
+=======================================================================
+
+Row {data-height=45}
+-------------------------------------
+   
+### Active travel data across Scotland from `r format(start_date, "%b %Y") ` to `r format(end_date, "%b %Y") `. Go to <a href = "sta-climate-change_cycling.html">detailed analysis</a> ...
+
+
+Column {data-height=620}
+-----------------------------------------------------------------------
+
+```{r, bicycle_counts_summaries}
+```
+
+### Cyclists &ndash; Total Count by Month &amp; Year
+```{r, bicycle_counts_overview}
+```
+
+### Pedestrians &ndash; Total Count by Month &amp; Year
+
+```{r, pedestrian_counts_summaries_nmf}
+```
+
+```{r, pedestrian_counts_nmf}
+```
+
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Counter Data Summaries
+
+#### Cycling Scotland's National Monitoring Framework (NMF) Counters
+
+```{r, summary_tables_nmf_totals, results = 'asis'}
+```
+
+```{r, summary_tables_nmf_average_by_counter, results = 'asis'}
+```
+
+
+
+```{=html}
+<p>&nbsp;<br />
+</p>
+```
+
+
+#### Non-NMF Counters
+
+```{r, summary_tables_councils_totals, results = 'asis'}
+```
+
+```{r, summary_tables_councils_average_by_counter, results = 'asis'}
+```
+
+
+
+Counter Locations
+=======================================================================
+
+>The timeline shows when bicycle counters came online in each location, and consistency in reporting from that point, with the most recent month at the top. Location is ordered from left to right by (highest) consistency in reporting (count greater than 0 each month). Mouse over icons in the plot to show detail or to identify points when all or no counters were reporting across each location (using the drop-down).
+
+```{r, counters_reporting}
+```
+
+####
+
+<div class="retain_default_cursor">
+
+```{r, counters_reporting_plotly, fig.height = 8, fig.width = 20}
+```
+
+</div>
+
+
+
+About
+=======================================================================
+
+
+```{r, child = c("about.Rmd")}
+```
+
+
+```{=html}
+  <p>Go to <a href = "sta-climate-change_cycling.html">detailed analysis</a> ...</p>
+
+```
+
+
+
+```{r}
+# cleanup ...
+
+#dbDisconnect(dbConn)
+#dbConn
+
+```
