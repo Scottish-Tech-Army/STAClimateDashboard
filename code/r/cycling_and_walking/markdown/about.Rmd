@@ -1,0 +1,54 @@
+```{=html}
+<p>&nbsp;<br />
+<!-- A summary sheet may be downloaded &ndash; <a href="cycle_counters_info_cards.pdf">cycle_counters_info_cards.pdf</a -->
+
+<h3>About the Visualisations</h3>
+
+<p>
+The active trevel dataset starts with the installation of 11 bicycle and pedestrian counters by Cycling Scotland's National Monitoring Framework (NMF) in local authorities predominantly in west, central Scotland, from `r format(start_date, "%b %Y") ` and through to `r format(end_date, "%b %Y") `. The 63rd counter was installed in Fort William (Highlands) in Aug 2021, and a further three in Edinburgh in Jun and Jul 2021. <br />
+The snapshots also include data from more dense networks of council-managed counters, some points along the John Muir Way, trunk roads and Sustrans-managed counters. Some councils manage counters outwith their geographical boundaries; for instance, the City of Edinburgh Council also provides counts for Dalkeith (Midlothian). Where more than one filter is used, the charts will always group (or order) first by location (e.g., hamlet, village, town or city), then local authority, then data provider.<br />
+Pedestrian counts when the analysis was on-going was available only from NMF Counters. Summaries for these are shown in the overview section.
+</p>
+
+<p>
+Most of the charts are interactive. Mousing over data points will display tooltips with more detail. Click/double-click on legend items to filter data sub-sets, with the exception of the plot reporting counter locations, which has only the drop-down filter. Most charts support zoom in by drawing a rectangle around a region of interest; double-click in empty space to return to the full view or choose reset axes from the toolbar. Alternatively, where visible, use the toolbar on the top, right, to interact with a chart.
+</p><p>
+Charts directly <!-- a href="#variation-inacross-locations" -->comparing detail by location<!-- /a --> use a <a href="https://www.investopedia.com/ask/answers/05/logvslinear.asp" title = "Investopedia provide a good description of why you would use a log scale." target = "_blank">log scale (rather than linear/arithmetic)</a> because of the very large differences in counts (and counters) across locations. For instance, Edinburgh and Glasgow had about 40 counters each by 2018, and as at mid 2021, 57 and 75 respectively. Being the second and first largest (cities) by population, and Edinburgh being especially dense, directly comparing counts to all other locations dwarfs all other data, including even Stirling and Dundee &ndash; we obtain <a href="images/linear_plot_count_by_location.png" title="Why we use a log instead of a linear plot to compare counts across locations" target = "_linear_plot" >plots with most of the data sitting in the bottom, left-hand corner</a>.
+</p>
+
+
+<h3>Counter Locations</h3>
+
+<p>It should be noted that there is some delay, normally not more than two months, between counter installation and the point from which data is recorded. <!-- Counters that came online within the last month or two may therefore not have any data reported in charts shown.--> Occasionally, also, a counter may go out of action temporarily and sometimes for significant periods of time. Under <a href="#counter-locations">Data Stories</a> we list all counter locations, <!-- &ndash; NMF, council- and other organisation-managed,--> indicating when they first started reporting active travel, and from that point, when operational.
+</p>
+
+
+<h3>Data Sources</h3>
+
+<p>
+Counter data may be accessed via Cycling Scotland's <a href = "https://usmart.io/org/cyclingscotland/" target = "_blank">Active Travel Open Data Portal</a>. Up to end Dec 2022 the data feeding into this analysis was updated shortly after the end of each month (to allow for any delays in data reporting).
+</p>
+
+<p>
+All data feeding into this analysis is extracted at the level of detail of hourly counts by counter, and then aggregated as required. Data may be accessed via the API; this requires registration and request of an API key. Alternatively, a <!-- a href= "https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/7ffbe5d6-fa13-4352-829d-0bb0a58e3355" target = "_blank" -->dump may be downloaded<!-- /a --> from the portal.<br />
+</p>
+
+<!--
+City of Edinburgh Council - Daily cycling counts from automatic cycling counters
+https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/b1f0bd42-e220-465e-99a3-c4f62824f21f
+
+National Monitoring Framework - all-mode traffic survey results 2017 to 2021 - Cycling Scotland
+https://usmart.io/org/cyclingscotland/discovery/discovery-view-detail/b9fdd462-1f45-4252-aedc-fbc596abcd90
+
+NOTE TO SELF - PUT NMF ABOUT PEDESTRIAN AND ALSO EXPLANATIONS ABOUT CALCULATIONS
+-->
+<br />
+
+<!-- h3>Weather Data</h3 -->
+<p>
+<a href = "https://www.metoffice.gov.uk/research/climate/maps-and-data/uk-and-regional-series" target = "_blank">Historical weather pattern data</a> was obtained from the Met Office.
+
+</p>
+
+```
+
