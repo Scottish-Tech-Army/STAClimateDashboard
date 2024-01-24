@@ -2,14 +2,12 @@
 title: Scottish Tech Army Climate Dashboard
 output: 
   flexdashboard::flex_dashboard:
-    includes:
-       in_header: GA_Script.html
     theme: bootstrap
     logo: sta_main_logo.png
     orientation: rows
     social: menu
-    self_contained: false
-    #lib_dir: libs
+    self_contained: true
+    lib_dir: libs
 ---
 
 ```{r setup, include=FALSE}
@@ -18,22 +16,21 @@ library(tidyverse)
 library(janitor)
 library(plotly)
 library(snakecase)
-library(htmltools)
 library(here)
 library(viridis)
+
 ```
 
 ```{r common code}
-source("index_base/simp_chart_plot.R")
+source("./STAClimateDashboard/code/r/index_ghg/index_markdown/index_base/simp_chart_plot.R") 
 ```
 
 ```{r read in data}
-scot_ghg <- read_csv(here("data/scottish-ghg-dataset-2019.csv")) %>%
+scot_ghg <- read_csv("data/scottish-ghg-dataset-2019.csv", show_col_types = FALSE) %>%
   # fix column names
   clean_names() %>%
   # remove empty columns
   select(-starts_with("x")) %>%
-
   # remove the base year line
   filter(emission_year != "BaseYear", ghg_emissions_mt_co2e > 0) %>%
   rename(year = emission_year, 
@@ -42,6 +39,7 @@ scot_ghg <- read_csv(here("data/scottish-ghg-dataset-2019.csv")) %>%
   # select relevant columns
   select(sg_categories, source_name, year, pollutant, emissions)
 ```
+
 ```{r cleaning ghg data}
 # separate out the sub categories 
 scot_ghg_clean <- scot_ghg %>%
@@ -250,7 +248,7 @@ simp_chart_plot("Agriculture")
 
 ```
 
-### Residential
+### [Residential](../STAClimateDashboard/code/r/home_energy/home_energy_markdown/home_energy_plots.html)
 
 ```{r}
 
@@ -258,7 +256,7 @@ simp_chart_plot("Residential")
 
 ```
 
-### [Transport](sta-climate-change_cycling.html)
+### [Transport](../STAClimateDashboard/code/r/cycling_and_walking/markdown/sta-climate-change_cycling.html)
 
 ```{r}
 # Show only Transport Emissions

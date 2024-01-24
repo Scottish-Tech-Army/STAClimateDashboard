@@ -1,0 +1,406 @@
+---
+title: Scottish Tech Army Climate Dashboard - Home Energy
+output: 
+  flexdashboard::flex_dashboard:
+    theme: bootstrap
+    logo: sta_main_logo.png
+    social: menu
+    self_contained: false
+    lib_dir: libs
+    orientation: rows
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE, results='hide'}
+#library(htmltools)
+library(tidyverse)
+library(here)
+library(viridis)
+library(ggplot2)
+library(plotly)
+library(sf)
+```
+
+```{r}
+#home energy statistics with local authority areas produced by cleaning script
+home_energy_data <- read_csv(here("./data/home_data/home_energy.csv"), show_col_types = FALSE)
+
+#change western isles local authority to match map file
+home_energy_data <- home_energy_data %>% 
+  mutate(
+    la_name = if_else(la_name == "Na h-Eileanan Siar", "Na h-Eileanan an Iar", la_name)
+    )
+```
+
+```{r}
+#Map
+#primary energy starts as kWh/year, total is divided by 1,000,000 to give GWh per year
+#current emissions starts as tonnes of CO2, Total is divided by 1000 to give Mega Tonnes of CO2
+home_energy_plot <- home_energy_data %>% 
+  group_by(la_name) %>% 
+  summarise(mean_co2_pfa = round(mean(co2_emissions_current_per_floor_area_kg_co2_m2_yr), digits = 2),
+            mean_future_co2_pfa = round(mean(future_emissions_floor_area_kg_co2_m2_yr), digits = 2),
+            mean_current_emissions = round(mean(current_emissions_t_co2_yr), digits = 2),
+            mean_future_emissions = round(mean(future_emissions), digits = 2),
+            mean_primary_energy = round(mean(primary_energy_indicator_k_wh_m2_year), digits = 2),
+            mean_energy_potential = round(mean(energy_consumption_potential), digits = 2),
+            total_current_emissions = round(sum(current_emissions_t_co2_yr)/1000, digits = 2),
+            total_future_emissions = round(sum(future_emissions)/1000, digits = 2),
+            total_primary_energy = round(sum(primary_energy_indicator_k_wh_m2_year*total_floor_area_m2)/1000000, digits = 2),
+            total_future_energy = round(sum(future_emissions)/1000, digits = 2)
+            )
+
+#Reading in shapefile and merging to data on local authority name
+
+shp <- read_sf(here("./data/home_data/scotland_map_files"),'scotland_council_areas_map')
+
+shp_data <- merge(shp, home_energy_plot, by.x = "NAME", by.y = "la_name")
+
+```
+
+# Indicative Efficiency
+
+## Row 1
+
+### Least Efficient Homes by Local Authority
+
+```{r warnings = FALSE, out.width = "50%"}
+
+map <- ggplot() +
+  geom_sf(aes(fill=mean_co2_pfa),color='transparent',data=shp_data)+
+  geom_sf(fill='transparent',color='transparent', data=shp_data)+
+  scale_fill_viridis(end = 0.9, direction = -1, name='')+
+  theme_void()+
+  theme(title=element_text(face='bold'))
+
+ggplotly(map, tooltip = "text")
+
+```
+
+### Mean emissions per square metre per year in kg of CO^2^
+
+```{r warnings = FALSE, out.width = "50%"}
+    home_energy_plot %>%
+      ggplot() +
+      aes(x = reorder(la_name, mean_co2_pfa), y = mean_co2_pfa, fill = mean_co2_pfa) +
+      geom_col(show.legend = FALSE) +
+      coord_flip() +
+      theme_minimal() +
+      scale_fill_viridis(end = 0.9, direction = -1 ) +
+  labs(
+        y = NULL,
+        x = NULL
+      ) 
+      
+```
+
+## Row 2
+
+### Existing Homes Over Time
+
+```{r warnings = FALSE, out.width = "50%"}
+#showing the trend of energy usage over time as it appears in the surveys
+#comparing with estimated potential use should all measures be taken to reduce energy use
+#ignoring surveys before 2014 - data set is small and a different method was used
+    efficiency_chart <- home_energy_data %>%
+      group_by(year_of_assessment) %>% 
+      filter(year_of_assessment > "2013") %>%
+      filter(type_of_assessment != "SAP, new dwelling") %>%
+      summarise(mean_co2_pfa = round(mean(co2_emissions_current_per_floor_area_kg_co2_m2_yr), digits = 2),
+                mean_future_co2_pfa = round(mean(future_emissions_floor_area_kg_co2_m2_yr), digits =2))
+    
+      efficiency_chart %>%
+      ggplot() +
+        aes(x = year_of_assessment) +
+        geom_smooth(aes(y = mean_co2_pfa), color = "#440154", se = FALSE) +
+        geom_smooth(aes(y = mean_future_co2_pfa), color = "#5ec962", linetype = "twodash", se = FALSE) +
+        geom_text(data = NULL, x = 2021, y = 53, label = "Current Emissions", color = "#440154") +
+        geom_text(data = NULL, x = 2021, y = 31, label = "Potential Emissions", color = "#5ec962") +
+        xlim(2014,2022)+
+        ylim(5,60)+
+        labs(
+         y = "Mean Emissions per square metre - all of Scotland",
+         x = "Year of Assessment"
+        ) +
+        theme_minimal()
+
+```
+
+### New Homes Over Time
+
+```{r warnings = FALSE, out.width = "50%"}
+#repeating graph just for new properties to show difference at fixed scale (ylim)
+    new_properties <- home_energy_data %>%
+      group_by(year_of_assessment) %>% 
+      filter(type_of_assessment == "SAP, new dwelling") %>%
+      filter(year_of_assessment > "2013") %>%
+      summarise(mean_co2_pfa = round(mean(co2_emissions_current_per_floor_area_kg_co2_m2_yr), digits = 2),
+                mean_future_co2_pfa = round(mean(future_emissions_floor_area_kg_co2_m2_yr), digits =2))
+      
+      new_properties %>%
+      ggplot() +
+        aes(x = year_of_assessment) +
+        geom_smooth(aes(y = mean_co2_pfa), color = "#440154", se = FALSE) +
+        geom_smooth(aes(y = mean_future_co2_pfa), color = "#5ec962", linetype = "twodash", se = FALSE) +
+        geom_text(data = NULL, x = 2021, y = 16, label = "Current Emissions", color = "#440154") +
+        geom_text(data = NULL, x = 2021, y = 11, label = "Potential Emissions", color = "#5ec962") +
+        xlim(2014,2022)+
+        ylim(5,60)+
+        labs(
+         y = "Mean Emissions per square metre - all of Scotland",
+         x = "Year of Assessment"
+        ) +
+        theme_minimal()
+
+```
+
+# Total Emissions
+
+## Row 1
+
+### Indicative Total Emissions by Local Authority
+
+```{r warnings = FALSE, out.width = "50%"}
+
+map <- ggplot() +
+  geom_sf(aes(fill=total_current_emissions),color='transparent',data=shp_data)+
+  geom_sf(fill='transparent',color='transparent', data=shp_data)+
+  scale_fill_viridis(end = 0.9, direction = -1, name = '' )+
+  theme_void()+
+  theme(title=element_text(face='bold'))
+
+ggplotly(map, tooltip = "text")
+
+```
+
+### Total emissions for each Local Authority in Mega Tonnes of CO^2^
+
+```{r warnings = FALSE, out.width = "50%"}
+    home_energy_plot %>%
+      ggplot() +
+      aes(x = reorder(la_name, total_current_emissions), y = total_current_emissions, fill = total_current_emissions) +
+      geom_col(show.legend = FALSE) +
+      coord_flip() +
+      theme_minimal() +
+      scale_fill_viridis(end = 0.9, direction = -1 ) +
+  labs(
+        y = NULL,
+        x = NULL
+      ) 
+      
+```
+
+## Row 2
+
+### Total Emissions broken down by Tenure
+
+```{r warnings = FALSE, out.width = "50%"}
+    home_energy_data %>%
+      group_by(la_name, tenure) %>% 
+      summarise(total_current_emissions = round(sum(current_emissions_t_co2_yr)/1000, digits = 2)) %>% 
+      ggplot() +
+      aes(fill = tenure, x = reorder(la_name, total_current_emissions), y = total_current_emissions) +
+      geom_col() +
+      coord_flip() +
+      theme_minimal() +
+      scale_fill_viridis(discrete = TRUE, name = 'Tenure') + 
+      labs(
+        y = " Thousand Tonnes CO2 per Year",
+        x = NULL
+      ) 
+```
+
+### Total Emissions broken down by Property Type
+
+```{r warnings = FALSE, out.width = "50%"}
+    home_energy_data %>%
+      group_by(la_name, property_type) %>% 
+      summarise(total_current_emissions = round(sum(current_emissions_t_co2_yr)/1000, digits = 2)) %>% 
+      ggplot() +
+      aes(fill = property_type, x = reorder(la_name, total_current_emissions), y = total_current_emissions) +
+      geom_col() +
+      coord_flip() +
+      theme_minimal() +
+      scale_fill_viridis(discrete = TRUE, name = 'Property Type') + 
+      labs(
+        y = " Thousand Tonnes CO2 per Year",
+        x = NULL
+      ) 
+```
+
+# Indicative Energy Use
+
+## Row 1
+
+### Indicative Home Energy Usage by Local Authority
+
+```{r warnings = FALSE, out.width = "50%"}
+
+map <- ggplot() +
+  geom_sf(aes(fill=total_primary_energy),color='transparent',data=shp_data)+
+  geom_sf(fill='transparent',color='transparent', data=shp_data)+
+  scale_fill_viridis(end = 0.9, direction = -1, name='')+
+  theme_void()+
+  theme(title=element_text(face='bold'))
+
+ggplotly(map, tooltip = "text")
+
+```
+
+### Total energy used in GWh
+
+```{r warnings = FALSE, out.width = "50%"}
+    home_energy_plot %>%
+      ggplot() +
+      aes(x = reorder(la_name, total_primary_energy), y = total_primary_energy, fill = total_primary_energy) +
+      geom_col(show.legend = FALSE) +
+      coord_flip() +
+      theme_minimal() +
+      scale_fill_viridis(end = 0.9, direction = -1 ) +
+  labs(
+        y = NULL,
+        x = NULL
+      ) 
+      
+```
+
+## Row 2
+
+### Existing Homes Energy Use Over Time
+
+```{r warnings = FALSE, out.width = "50%"}
+#showing the trend of energy usage over time as it appears in the surveys
+#comparing with estimated potential use should all measures be taken to reduce energy use
+#ignoring surveys before 2014 - data set is small and a different method was used
+    efficiency_chart <- home_energy_data %>%
+      group_by(year_of_assessment) %>% 
+      filter(year_of_assessment > "2013") %>%
+      filter(type_of_assessment != "SAP, new dwelling") %>%
+      summarise(mean_primary_energy = round(mean(primary_energy_indicator_k_wh_m2_year), digits = 2),
+                mean_energy_potential = round(mean(energy_consumption_potential), digits = 2))
+      
+      efficiency_chart %>%
+      ggplot() +
+        aes(x = year_of_assessment) +
+        geom_smooth(aes(y = mean_primary_energy), color = "#440154", se = FALSE) +
+        geom_smooth(aes(y = mean_energy_potential), color = "#5ec962", linetype = "twodash", se = FALSE) +
+        geom_text(data = NULL, x = 2021, y = 260, label = "Current Energy Use", color = "#440154") +
+        geom_text(data = NULL, x = 2021, y = 170, label = "Potential Energy Use", color = "#5ec962") +
+        xlim(2014,2022)+
+        ylim(0, 300)+
+        labs(
+         y = "Mean Efficiency in"~kWh/m^2,
+         x = "Year of Assessment"
+        ) +
+        theme_minimal()
+
+```
+
+### New Homes Energy Use Over Time
+
+```{r warnings = FALSE, out.width = "50%"}
+#repeating graph just for new properties to show difference and fixed scale (ylim)
+    new_properties <- home_energy_data %>%
+      group_by(year_of_assessment) %>% 
+      filter(type_of_assessment == "SAP, new dwelling") %>%
+      filter(year_of_assessment > "2013") %>%
+      summarise(mean_primary_energy = round(mean(primary_energy_indicator_k_wh_m2_year), digits = 2),
+                mean_energy_potential = round(mean(energy_consumption_potential), digits = 2))
+      
+      new_properties %>%
+      ggplot() +
+        aes(x = year_of_assessment) +
+        geom_smooth(aes(y = mean_primary_energy), color = "#440154") +
+        geom_smooth(aes(y = mean_energy_potential), color = "#5ec962", linetype = "twodash") +
+        geom_text(data = NULL, x = 2021, y = 100, label = "Current Energy Use", color = "#440154") +
+        geom_text(data = NULL, x = 2021, y = 25, label = "Potential Energy Use", color = "#5ec962") +
+        xlim(2014,2022)+
+        ylim(0, 300)+
+        labs(
+         y = "Mean Efficiency in"~kWh/m^2,
+         x = "Year of Assessment"
+        ) +
+        theme_minimal()
+
+```
+
+# About
+
+## Row
+
+### Number and Type of Assessments
+
+```{r warnings = FALSE, out.width = "50%"}
+#plot the number of assessments over time - indicates for trends to ignore pre 2014 as not sufficient data
+#also displays the scale of new build to existing dwellings
+    home_energy_data %>%
+      group_by(year_of_assessment, type_of_assessment) %>% 
+      ggplot() +
+      aes(x = year_of_assessment, fill = type_of_assessment) +
+      geom_bar() +
+      theme_minimal() +
+      scale_fill_viridis(discrete = TRUE, labels=c('existing dwelling (Reduced SAP)', 'existing dwelling', 'new dwelling'),
+                         name="Standard Assessment Procedure") + 
+      labs(
+        y = "number of assessments",
+        x = "Date"
+      )
+```
+
+### Assessments by Local Authority
+
+```{r warnings = FALSE, out.width = "50%"}
+#plot the number of assessments over time - indicates for trends to ignore pre 2014 as not sufficient data
+#also displays the scale of new build to existing dwellings
+    home_energy_data %>%
+      group_by(la_name) %>% 
+      mutate(assessments = n()) %>%
+      ggplot() +
+      aes(x = reorder(la_name,(-assessments)), fill = assessments) +
+      geom_bar() +
+      theme_minimal() +
+      scale_fill_viridis() + 
+      labs(
+        y = "number of assessments",
+        x = "Local Authority"
+      ) +
+    theme(axis.text.x = element_text(angle=45,hjust=1)) 
+
+```
+
+## Row
+
+### Data Sources and Notes on the data
+
+Local Authority and postcode Lookup Datasets: <br>
+<https://www.nrscotland.gov.uk/statistics-and-data/geography/our-products/scottish-postcode-directory/2022-2><br>
+<https://statistics.gov.scot/data/data-zone-lookup> 
+<br>
+Domestic Energy Performance Certificates Data: <http://statistics.gov.scot/data/domestic-energy-performance-certificates><br>
+There are 1,596,371 records up to Q3 2022 There are 5125 where the
+Postcode does not match due to data errors or the homes have just been
+built and the postcode directory has not been updated yet. 3497 records are ignored for
+having a negative figure in the potential improvement field - indicating that by delivering the improvements listed the emissions will go up.
+
+### Author: Original Code by [Stephanie Duncan](https://www.linkedin.com/in/stephanie-mpd/)
+
+This interactive dashboard gives insights and trends on home energy in Scotland between 2012 - 2020.
+
+The code I wrote to produce this dashboard can be found on my [Github Repository](https://github.com/stephanieduncan/climate_challenge_cop26/)
+
+The data used to carry out analysis for this dashboard is open source and can be found in the links below.
+
+---
+
+Data Sources
+
+**[Statistics.gov.scot](Statistics.gov.scot)**
+
+[Home Energy Performance Certificates Data](https://statistics.gov.scot/data/domestic-energy-performance-certificates)
+
+---
+
+Code adapted to markdown and updated to include more recent data by Euan Ross
+

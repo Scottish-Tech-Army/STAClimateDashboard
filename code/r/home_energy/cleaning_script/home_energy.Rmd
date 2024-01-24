@@ -19,14 +19,14 @@ library(janitor)
 
 ```{r}
 #Postcode lookup file
-postcode_lookup <- read_csv(here("raw_data/nrs_spd_postcode_index_22-2.csv")) %>% clean_names()
+postcode_lookup <- read_csv(here("./data/home_data/nrs_spd_postcode_index_23_2.csv"), show_col_types = FALSE) %>% clean_names()
 ```
 
 ```{r}
 postcode_lookup <- postcode_lookup %>% 
   select(postcode, council_area2019code)
 
-#remove duplicated postcodes - ones that span 2 Local Authorities, just use the first
+#remove duplicated postcodes - ones with 2 Local Authorities, just use the first
 postcode_lookup <- postcode_lookup[!duplicated(postcode_lookup$postcode),]
 
 colnames(postcode_lookup)[colnames(postcode_lookup) == 'council_area2019code'] <- 'la_code'
@@ -35,7 +35,7 @@ colnames(postcode_lookup)[colnames(postcode_lookup) == 'council_area2019code'] <
 
 ```{r}
 #Local Authority lookup file
-la_lookup <- read_csv(here("raw_data/DataZone2011lookup_2022-05-31.csv")) %>% clean_names()
+la_lookup <- read_csv(here("./data/home_data/DataZone2011lookup_2022-05-31.csv"), show_col_types = FALSE) %>% clean_names()
 ```
 
 ```{r}
@@ -48,19 +48,20 @@ la_lookup <- la_lookup %>%
 # identify number of extract csv files in directory
 ```{r}
 #the pattern looks for the Q to identify the quarterly reports
-fils <- list.files(pattern = "Q")
+fils <- list.files(path=here("./data/home_data/epc_extracts"), pattern = "Q")
 no_of_files <- length(fils)
 ```
 
 # converting csv files to utf-8 to stop an error when trying to work with the dataframe
 ```{r}
-for (val in fils)
-{
+#for (val in fils)
+#{
 #make sure all files are UTF-8
-temp_file <- read.csv(val)
-write.csv(temp_file, val, fileEncoding = "UTF-8")
-rm(temp_file)
-}
+#file_path <- file.path(here("./data/home_data/epc_extracts", fsep = "/", val))
+#temp_file <- read.csv(file_path)
+#write.csv(temp_file, file_path, fileEncoding = "UTF-8")
+#rm(temp_file)
+#}
 ```
 
 # Main process loop - for each quarter file
@@ -69,8 +70,9 @@ home_energy <- data.frame()
 
 for (i in 1:length(fils))
 {
-#Read in each csv file in the folder
-    tmp_df <- read.csv(fils[i])
+#Read in each csv file in the folder, in to temporary dataframe
+  file_path <- file.path(here("./data/home_data/epc_extracts", fsep = "/", fils[i]))
+    tmp_df <- read.csv(file_path)
     
 #set the correct headers, removing first row of headers create temp df, remove first row, make column names lower case
     names(tmp_df) <- tmp_df[1,]
@@ -85,16 +87,11 @@ for (i in 1:length(fils))
     colnames(tmp_df)[colnames(tmp_df) == 'co2_emissions_current_per_floor_area_kg_co2_m_af_ae_af_a_a2_yr'] <- 'co2_emissions_current_per_floor_area_kg_co2_m2_yr'
     colnames(tmp_df)[colnames(tmp_df) == 'co2_emissions_current_per_floor_area_kg_co2_m_a_a2_yr'] <- 'co2_emissions_current_per_floor_area_kg_co2_m2_yr'
     
-    colnames(tmp_df)
-    
 #keeping relevant columns    
     tmp_df <- tmp_df  %>%
     select(osg_uprn, address1, address2, post_town, postcode, date_of_assessment, type_of_assessment, energy_consumption_potential, primary_energy_indicator_k_wh_m2_year, total_floor_area_m2, current_energy_efficiency_rating, current_energy_efficiency_rating_band, potential_energy_efficiency_rating, potential_energy_efficiency_rating_band, co2_emissions_current_per_floor_area_kg_co2_m2_yr, current_emissions_t_co2_yr, potential_reduction_in_emissions_t_co2_yr, tenure, data_zone_2011, local_authority,
 built_form, property_type, current_energy_efficiency_rating, current_energy_efficiency_rating_band, potential_energy_efficiency_rating,
-potential_energy_efficiency_rating_band, main_heating_1_fuel_type, windows_description) %>%
-    
-#removing missing values from specific columns
-  drop_na(co2_emissions_current_per_floor_area_kg_co2_m2_yr)
+potential_energy_efficiency_rating_band, main_heating_1_fuel_type, windows_description, lzc_energy_source)
     
 # Extracting just the S01 code for the data zone
 tmp_df$data_zone_2011 <- str_extract(tmp_df$data_zone_2011, "[Ss][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]")
@@ -115,6 +112,9 @@ tmp_df$co2_emissions_current_per_floor_area_kg_co2_m2_yr <- as.numeric(as.charac
 tmp_df$primary_energy_indicator_k_wh_m2_year <- as.numeric(as.character(tmp_df$primary_energy_indicator_k_wh_m2_year))
 tmp_df$current_emissions_t_co2_yr <- as.numeric(as.character(tmp_df$current_emissions_t_co2_yr))
 tmp_df$potential_reduction_in_emissions_t_co2_yr <- as.numeric(as.character(tmp_df$potential_reduction_in_emissions_t_co2_yr))
+tmp_df$total_floor_area_m2 <- as.numeric(tmp_df$total_floor_area_m2)
+tmp_df$energy_consumption_potential <- as.numeric(tmp_df$energy_consumption_potential)
+
 
 #combine in to one dataframe
 home_energy <- rbind.data.frame(home_energy, tmp_df)
@@ -153,7 +153,7 @@ home_energy <- home_energy %>%
   )
 ```
 
-#Hard coding to update some Local Authority Names
+#Hard coding to update some Local Authority Names, clear out bad values to derive Local Authority Later
 ```{r}
 
 home_energy <- home_energy %>% 
@@ -203,23 +203,32 @@ home_energy$year_of_assessment <- as.numeric(home_energy$year_of_assessment)
 
 ```
 
-#calculating the future CO2 emissions - remove negative potential figures - if improvements are done the emissions would get worse
+#remove negative potential figures - if improvements are done the emissions would get worse?
+#create dataset or properties with the error before zeroing the field.
 ```{r}
-	home_energy_negative_potential <- home_energy %>%
-  filter(potential_reduction_in_emissions_t_co2_yr < 0)
 
-home_energy$total_floor_area_m2 <- as.numeric(home_energy$total_floor_area_m2)
+home_energy_pot_red_emiss_neg <- home_energy %>%
+  filter(potential_reduction_in_emissions_t_co2_yr <= 0)
 
-	home_energy <- home_energy %>%
-	  filter(potential_reduction_in_emissions_t_co2_yr > 0) %>%
+home_energy <- home_energy %>%
+    mutate(
+    potential_reduction_in_emissions_t_co2_yr = if_else(potential_reduction_in_emissions_t_co2_yr < 0, 0, potential_reduction_in_emissions_t_co2_yr)
+    )
+
+```
+
+#calculating the future CO2 emissions
+```{r}
+
+home_energy <- home_energy %>%
   mutate(future_emissions = (current_emissions_t_co2_yr - potential_reduction_in_emissions_t_co2_yr),
          future_emissions_floor_area_kg_co2_m2_yr = (future_emissions / total_floor_area_m2)*1000
          )
 	
 ```
 
-#Joining with postcode_lookup to get la code - joining with la lookup to get the la name, also listing where the postcode does not match
-#the local authority field in the data is often not completed - only use it where postcode is not found
+#Joining with postcode_lookup to get la code - joining with la lookup to get the la name also listing where the postcode does not match
+
 ```{r}
 
 home_energy_zone <- home_energy %>% 
@@ -245,7 +254,35 @@ home_energy_zone <- unique(home_energy_zone)
 
 ```
 
+#repeating for net zero homes
+
+```{r}
+
+home_energy_net_zero_zone <- home_energy_pot_red_emiss_neg %>% 
+  left_join(postcode_lookup, by = "postcode")
+
+home_energy_zone_nz_postcode_fail <- home_energy_pot_red_emiss_neg %>% 
+  anti_join(postcode_lookup, by = "postcode")
+
+home_energy_net_zero_zone <- home_energy_net_zero_zone %>%
+  left_join(la_lookup, by = "la_code")
+
+#Where postcode did not find a local authority use the one on the record
+home_energy_net_zero_zone <- home_energy_net_zero_zone %>% 
+  mutate(
+    la_name = if_else(is.na(la_name), local_authority, la_name)
+  )
+#remove any not found
+#home_energy_net_zero_zone <- home_energy_net_zero_zone %>% 
+#  filter(la_name != "")
+
+#remove duplicates - there should not be any but 32 were found last time checked
+home_energy_net_zero_zone <- unique(home_energy_net_zero_zone)
+
+```
+
 #Writing to csv
 ```{r}
-write_csv(home_energy_zone, (here("clean_data/home_energy.csv")))
+write_csv(home_energy_zone, (here("./data/home_data/home_energy.csv")))
+write_csv(home_energy_net_zero_zone, (here("./data/home_data/home_energy_potential_net_zero.csv")))
 ```
