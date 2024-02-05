@@ -423,7 +423,8 @@ loadAndParseTrafficSurveyData <-
             mutate(CountPeriod = paste0(month(Date, label = TRUE), "-", year(Date)),
                    across(CountPeriod, ~ fct_reorder(., Date)),
                    ) %>%
-            select(CountPeriod, everything())
+            select(CountPeriod, everything()) %>%
+            distinct()
         
         
         if (sum(c("Location", "Site") %in% names(data_loaded)) == 2) {
@@ -453,7 +454,7 @@ loadAndParseTrafficSurveyData <-
         
         data_loaded <- data_loaded %>%
             mutate(CountPeriodAsDate = parse_datetime(as.character(CountPeriod), format = "%b-%Y"),
-                   across(CountPeriod = fct_reorder(., CountPeriodAsDate))
+                   across(CountPeriod, ~ fct_reorder(., CountPeriodAsDate))
                    ) %>%
             select(-CountPeriodAsDate)
 
