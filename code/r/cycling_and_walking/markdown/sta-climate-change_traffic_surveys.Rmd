@@ -53,11 +53,11 @@ knitr::read_chunk("base/nmf_all_mode_traffic_surveys_interactive.r")
 
 ```
 
-```{r sqa_data_extraction, cache.lazy = FALSE}
+```{r surveydata_extraction, cache.lazy = FALSE}
 
-countInterval <- "hour"
-#source("base/sta_climate_change_traffic_survey_data_sql_extract.r", local = knitr::knit_global())
-load("traffic_survey_datasets.Rdata")  #interim - querying and parsing from scratch
+countInterval <- "quarter_hour" # "hour" - switched to filter out query
+source("base/sta_climate_change_traffic_survey_data_sql_extract.r", local = knitr::knit_global())
+#load("traffic_survey_datasets.Rdata")  #interim - querying and parsing from scratch
 source("base/sta_climate_change_traffic_survey_data_parsing.r", local = knitr::knit_global())
 
 ```
@@ -83,16 +83,16 @@ overview_plot
 
 ```
 
-### Cycling {.no-padding}
+### Cycling {.no-padding data-width=500}
 
-```{r, sunburst_layout_bicycles}
+```{r, sunburst_layout_bicycles, fig.width = 8}
 ```
 
 
 Row {data-height=75}
 -------------------------------------
    
-### __Traffic counts by mode. The highest counts are furthest left, decreasing to the right.__
+### __Traffic counts by mode and type (motorised bs. active). The highest (typical daily) counts are furthest left, decreasing to the right.__
 
 ```{=html}
 
@@ -165,6 +165,153 @@ transportation_mode_plots[[9]]
 ```
 
 
+Daily Patterns &ndash; All Transportation  Modes {data-navmenu="Daily Patterns &ndash; All Modes"}
+=======================================================================
+
+> Typical counts (median) across all survey locations compared to the average and totals, to distinguish between growth for any transportation mode and an increase in number of locations included in the survey. Looking at both medians (more typical) and means (averages) accounts for potential skew in traffic count and transportation mode due to road type and location.
+
+Row
+-------------------------------------
+
+### Change in Transportation Mode over Time
+
+```{r, facet_view_survey_periods_all_modes, fig.height = 18.5, fig.width = 18}
+```
+
+### Change in Count Locations over Time
+
+####
+
+```{=html}
+
+<p>&nbsp;<br />
+	&nbsp;<br />
+	&nbsp;<br />
+	&nbsp;<br />
+</p>
+
+```
+
+####
+
+```{r, facet_view_survey_periods_totals_all_modes, fig.height = 5.5, fig.width = 12}
+```
+
+####
+
+```{=html}
+
+<p>&nbsp;<br />
+	&nbsp;<br />
+</p>
+
+```
+
+####
+
+```{r, location_count_survey_periods_all_modes, fig.height = 5.5, fig.width = 12}
+```
+
+
+Daily Patterns &ndash; Cycling {data-navmenu="Daily Patterns &ndash; All Modes"}
+=======================================================================
+
+```{r, summary_bicycle_daily_patterns}
+```
+
+
+Row
+-------------------------------------
+
+### Typical Daily Count across Locations &ndash; Cycling
+
+```{r, bicycle_daily_patterns_median_daily, fig.height = 6.5, fig.width = 15}
+```
+
+### Daily Average Count per Location &ndash; Cycling
+
+```{r, bicycle_daily_patterns_average_daily, fig.height = 6.5, fig.width = 15}
+```
+
+
+Row
+-------------------------------------
+
+### Total Count &ndash; Cycling
+
+```{r, bicycle_daily_patterns_count, fig.height = 6.5, fig.width = 15}
+```
+
+### No. of Locations &ndash; Cycling
+
+```{r, bicycle_daily_patterns_count_locations, fig.height = 6.5, fig.width = 15}
+```
+
+
+
+Daily Patterns &ndash; Walking {data-navmenu="Daily Patterns &ndash; All Modes"}
+=======================================================================
+
+```{r, summary_pedestrians_daily_patterns}
+```
+
+
+Row
+-------------------------------------
+
+### Typical Daily Count across Locations &ndash; Walking
+
+```{r, pedestrians_daily_patterns_median_daily, fig.height = 6.5, fig.width = 15}
+```
+
+### Daily Average Count per Location &ndash; Walking
+
+```{r, pedestrians_daily_patterns_average_daily, fig.height = 6.5, fig.width = 15}
+```
+
+
+Row
+-------------------------------------
+
+### Total Count &ndash; Walking
+
+```{r, pedestrians_daily_patterns_count, fig.height = 6.5, fig.width = 15}
+```
+
+### No. of Locations &ndash; Walking
+
+```{r, pedestrians_daily_patterns_count_locations, fig.height = 6.5, fig.width = 15}
+```
+
+
+Change over Time &ndash; Active Travel {data-navmenu="Daily Patterns &ndash; All Modes"}
+=======================================================================
+
+Row
+-------------------------------------
+
+### Change over Time
+
+```{r, growth_daily_patterns_active_travel, fig.height = 8.5, fig.width = 18}
+```
+
+
+Row
+-------------------------------------
+
+### Change by Season
+
+```{r, growth_daily_patterns_seasonal_active_travel, fig.height = 8.5, fig.width = 20}
+```
+
+
+```{r}
+
+ rm(max_mid_daily, summary_active_travel)
+ 
+```
+
+
 
 Hourly Patterns &ndash; Active Travel
 =======================================================================
@@ -172,7 +319,7 @@ Hourly Patterns &ndash; Active Travel
 Row
 -------------------------------------
 
-### Cycling &ndash; per Bi-Annual Period
+### Cycling &ndash; per Biannual Period
 
 ```{r, facet_view_survey_periods_cyclist, fig.height = 6.5, fig.width = 25}
 ```
@@ -180,10 +327,11 @@ Row
 Row
 -------------------------------------
 
-### Walking &ndash; per Bi-Annual Period
+### Walking &ndash; per Biannual Period
 
 ```{r, facet_view_survey_periods_pedestrian, fig.height = 6.5, fig.width = 25}
 ```
+
 
 
 About
@@ -198,6 +346,11 @@ About
 </p><p>
 </p>
 
+<h4>Statistics Used</h4>
+
+<p>
+The area and sunburst charts report medians, as this provides the more meaningful, or typical count for comparing data that is often skewed by location and/or time. This allows more direct comparison between locations with large differences in number of reporting points.
+</p>
 
 <h4>Data Sources</h4>
 
