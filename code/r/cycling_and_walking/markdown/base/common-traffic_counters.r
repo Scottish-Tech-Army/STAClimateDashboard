@@ -5,17 +5,20 @@ source("base/common.r")
 #options(lubridate.week.start = 1) # need to group week-ends - not set, though...
 
 label_all_bicycle_providers <- "All Bicycle Counters" #Data Providers"
-default_provider <- "National Monitoring Framework (CS)"
+default_provider <- "Cycling Scotland"  # "National Monitoring Framework (CS)"
 named_route_providers <- c("North East Trunk Roads", "North West Trunk Roads", "South East Trunk Roads",
                            "South West Trunk Roads", "Sustrans", "John Muir Way")
 
-transportation_modes <- c("Car" = "Car", "Taxi" = "Taxi", "LGV" = "LGV", "HGV" = "HGV", "ServiceBus" = "Service Bus", "Coach" = "Coach", "MCycle" = "Motorcycle", "Cyclist" = "Bicycle", "Pedestrian" = "Pedestrian")
+## now stored in DB so simpler to update with changes to source
+#transportation_modes <- c("Car" = "Car", "Taxi" = "Taxi", "LGV" = "LGV", "HGV" = "HGV", "ServiceBus" = "Service Bus", "Coach" = "Coach", "MCycle" = "Motorcycle", "Cyclist" = "Bicycle", "Pedestrian" = "Pedestrian")
 
-transportation_types <- c("MotorVehicle", "ActiveTravel")
-transportation_type <- c("Car" = "MotorVehicle", "Taxi" = "MotorVehicle", "LGV" = "MotorVehicle", "HGV" = "MotorVehicle", "ServiceBus" = "MotorVehicle", "Coach" = "MotorVehicle", "MCycle" = "MotorVehicle", "Cyclist" = "ActiveTravel", "Pedestrian" = "ActiveTravel")
+#transportation_types <- c("MotorVehicle", "ActiveTravel")
+#transportation_type <- c("Car" = "MotorVehicle", "Taxi" = "MotorVehicle", "LGV" = "MotorVehicle", "HGV" = "MotorVehicle", "ServiceBus" = "MotorVehicle", "Coach" = "MotorVehicle", "MCycle" = "MotorVehicle", "Cyclist" = "ActiveTravel", "Pedestrian" = "ActiveTravel")
 
 
 traffic_direction_variables <- c("Context", "Direction", "Side", "Easting", "Northing")
+
+count_intervals <- c("quarter_hour", "hour")
 
 
 cop_cycling_theme <- 
@@ -28,18 +31,24 @@ cop_cycling_theme <-
                 axis.text.y = element_text(size = 14), #element_markdown(size = 12), #
                 plot.title = element_text(size = 20),
                 legend.title = element_text(size = 16), legend.text = element_text(size = 14), 
-                strip.text = element_text(size = 20)
-            ) 
-
+                strip.text = element_text(size = 20),
+                strip.background = element_rect(colour = "#dfdfdf", fill = "NA", linewidth = 1.5)
+            )
 
 
 parseCounterDataFromDB <-
     function(counterData, glimpseContent = FALSE) {
       
+        if (length(setdiff(c("Provider", "Latitude", "Longitude"), names(counterData))) == 0) {
+            counterData <- counterData %>%
+                relocate(Latitude, .before = Longitude) %>%  # correction to order, will have no impact if not needed
+                relocate(Provider) 
+        }
+        
         counterData <- counterData %>%
-            mutate(across(c(siteID, site, Location, countInterval, traffic_mode, Provider), as.factor)) %>%
-            relocate(Latitude, .before = Longitude) %>%  # correction to order, will have no impact if not needed
-            relocate(Provider, .before = siteID) %>%
+            mutate(across(any_of(c("Provider", "site", "siteID", "Location", "countInterval", "traffic_mode")), as.factor)) 
+
+        counterData <- counterData %>%        
             mutate(across(c(fromDate, toDate), as_datetime)) %>%
             
             mutate(date = as_date(map_chr(str_split(localTimestamp, "T"), 1))) %>%
@@ -224,6 +233,171 @@ getMetadataFromJson <-
     }
 
 
+buildRequestUrl <-
+    function(apiBaseUrl, startDate = NULL, cutoffDate = NULL, limitResults = -1, getLatestResultDate = FALSE) {
+        
+        if (getLatestResultDate)
+            return(paste0(apiBaseUrl, "?limit(1,0)&sort(-startTime)"))
+        
+        
+        # else - parse and generate request
+        if ((limitResults > 0) |
+                (!is_null(startDate) && (str_trim(startDate) != "")) |
+                (!is_null(cutoffDate) && (str_trim(cutoffDate) != ""))
+           )
+            apiBaseUrl <- paste0(apiBaseUrl, "?")
+        
+        if (limitResults > 0)
+            apiBaseUrl <- paste0(apiBaseUrl, "&limit(", limitResults, ",0)")
+        
+        if (limitResults == -1) # return all ...
+            apiBaseUrl <- paste0(apiBaseUrl, "&limit(-1)")
+        
+        
+        if (!is_null(startDate) && (str_trim(startDate) != ""))
+            apiBaseUrl <- paste0(apiBaseUrl, "&gt(startTime,", startDate, ")")
+        
+        if (!is_null(cutoffDate) && (str_trim(cutoffDate) != ""))
+            apiBaseUrl <- paste0(apiBaseUrl, "&le(startTime,", cutoffDate, ")")
+
+        
+        gsub("\\?\\&", "?", apiBaseUrl)
+    }
+
+
+getCounterDatasetCutoff <-
+    function(apiBaseUrl, api_key_id = "", api_key_secret = "", contentType = "json", printResponse = TRUE) {
+        
+        label <- names(apiBaseUrl)
+        if (printResponse & !is_null(label))
+            print(paste("Dataset:", label))
+        
+        
+        apiBaseUrl <- buildRequestUrl(apiBaseUrl, getLatestResultDate = TRUE) |>
+            paste0(if_else(contentType == "csv", "&format(csv)", "")) # json (default) or only alt - csv
+        if (printResponse)
+            print(apiBaseUrl)
+        
+        response <- request(apiBaseUrl)|>
+            req_headers("api-key-id" = api_key_id) |>
+            req_headers("api-key-secret" = api_key_secret) |>
+            req_perform()
+
+        if (printResponse) {
+            response |>
+                resp_status() |>
+                print()
+
+            response |>
+                resp_status_desc() |>
+                print()
+        }
+        
+        if (contentType == "csv")
+            counterData <- response |>
+                            resp_body_string() |>
+                            read_csv() |>
+                            suppressMessages()
+        else
+            counterData <- response |>
+                            resp_body_string() |>
+                            fromJSON() |>
+                            suppressMessages()
+
+        invisible(counterData |>
+                    select(startTime) |>
+                    mutate(across(startTime, as_date)) |>
+                    deframe()
+                )
+    }
+
+
+loadCounterDataFromUrl <-
+    function(apiBaseUrl, datasetLabel = NULL, startDate = NULL, cutoffDate = NULL, limitResults = -1,
+                 api_key_id = "", api_key_secret = "", contentType = "json",
+                 printResponse = FALSE, printDatasetCutoff = FALSE, generateRequestUrlOnly = FALSE) {
+        
+        
+        if (is_null(datasetLabel))
+            datasetLabel <- names(apiBaseUrl)
+        if (!is_null(datasetLabel))
+            print(paste("Parsing counter data provided by:", datasetLabel, "..."))
+
+        reverseSort <- FALSE
+        datasetCutoff <- getCounterDatasetCutoff(apiBaseUrl, api_key_id, api_key_secret, contentType, printResponse)
+        if (printResponse)
+            print(datasetCutoff)
+        
+        if (datasetCutoff < startDate) {
+            print(paste0("No results after '", startDate, "'! Dataset results last returned '", datasetCutoff, "'"))
+            
+            if (!printDatasetCutoff)
+                return()
+            
+            limitResults <- min(10, max(limitResults, 0))
+            reverseSort <- TRUE
+        }
+        if (datasetCutoff <= startDate)
+            startDate <- min((datasetCutoff - 1), startDate) # argument is gt
+        
+        if (cutoffDate <= startDate)
+            cutoffDate <- NULL
+
+        
+        apiBaseUrl <- buildRequestUrl(apiBaseUrl, startDate, cutoffDate, limitResults) |>
+            paste0(if_else(reverseSort, "&sort(-startTime)", ""),
+                   if_else(contentType == "csv", "&format(csv)", "") # json (default) or only alt - csv
+                  )
+        if (printResponse)
+            print(apiBaseUrl)
+        if (generateRequestUrlOnly)
+            return(apiBaseUrl)
+        
+        
+        response <- NULL # force reset - httr2 function and error messages not usable for returning on fail
+                         # otherwise, also response in cache falling through on request failure
+        tryCatch(
+            response <- request(apiBaseUrl) |>
+                req_headers("api-key-id" = api_key_id) |>
+                req_headers("api-key-secret" = api_key_secret) |>
+                req_perform()
+            
+            
+        , error = function(httpErrorMessage) {
+            
+            message(paste("Request failed for:", apiBaseUrl, "\n\n", httpErrorMessage))
+        },
+        finally = {
+            if (is_null(response))
+                return()
+        })
+        
+        
+        if (printResponse) {
+            response |>
+                resp_status() |>
+                print()
+
+            response |>
+                resp_status_desc() |>
+                print()
+        }
+        
+        if (contentType == "csv")
+            invisible(response |>
+                        resp_body_string() |>
+                        read_csv(id = "source") |>
+                        suppressMessages()
+                  )
+        else
+            invisible(response |>
+                        resp_body_string() |>
+                        fromJSON() |>
+                        suppressMessages()
+                  )
+    }
+
+
 loadAndParseMeteoData <-
     function(dataFile, region, metric, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
       
@@ -239,7 +413,7 @@ loadAndParseMeteoData <-
             mutate(across(year, as.integer)) %>%
             select(c(year, all_of(str_to_lower(month.abb)))) %>%
 
-            mutate(across(!matches("year")), as.numeric) %>% # just in case any issues reading in
+            mutate(across(!year, as.numeric)) %>% # just in case any issues reading in
             rename_if(is.double, str_to_title) %>%
 
             pivot_longer(!year, names_to = "month", values_to = metric) %>%
@@ -277,14 +451,14 @@ loadAndParseMeteoData <-
 
 
 loadAndParseMeteoStationData <-
-    function(dataFile, region, weather_station, startDateFilter = NULL, endDateFilter = NULL, glimpseContent = FALSE) {
+    function(dataFile, region, weather_station, startDateFilter = NULL, endDateFilter = NULL, na = NULL, glimpseContent = FALSE) {
     
         if (!is.null(startDateFilter))
             startDateFilter <- floor_date(startDateFilter, unit = "month")
         if (!is.null(endDateFilter))
             endDateFilter <- ceiling_date(endDateFilter, unit = "month") - 1
-    
-        historical_weather <- read_table(dataFile) %>%
+        
+        historical_weather <- read_table(dataFile, na = unique(c("NA", na))) %>%
                                 filter(rowSums(is.na(.)) != ncol(.))
         
         historical_weather <- historical_weather %>%
@@ -293,7 +467,7 @@ loadAndParseMeteoStationData <-
             mutate_if(negate(is.numeric), parse_number) %>%
 
             filter(year >= year(startDateFilter))%>%
-            mutate(across(year, as.ordered),
+            mutate(across(year, as.integer), # as.ordered), # causes issues binding results ...
                    across(month, ~ month(., label = TRUE))
                    ) %>%
 
@@ -337,7 +511,7 @@ parseMeteoDataFromDB <-
                    across(year, as.ordered),
                    across(month, ~ ordered(., levels = month.abb)),
                    across(c(region, weather_station, metric, statistic), as.factor)
-                   ) %>%
+                   ) 
  
  
         historicalWeatherData <- historicalWeatherData %>%
@@ -514,33 +688,29 @@ loadAndParseTrafficSurveyData <-
 parseTrafficSurveyDataFromDB <-
     function(trafficSurveyData, breakDownDates = FALSE, glimpseContent = FALSE) {
       
-        trafficSurveyData <- trafficSurveyData %>%
-            select(- (any_of(traffic_direction_variables) & where(~ sum(is.na(.)) == nrow(trafficSurveyData)))) %>%
+        trafficSurveyData <- trafficSurveyData |>
+            select(- (any_of(traffic_direction_variables) & where(~ sum(is.na(.)) == nrow(trafficSurveyData)))) |>
             mutate(across(c(CountPeriod, Code, LocalAuthority, Location, RoadName, RoadNumber, RoadType,
                             TimePeriod, countInterval, TransportationMode), as.factor),
                    across(Date, as_date),
-                   across(c(StartDateTime, EndDateTime), as_datetime)
+                   across(matches("DateTime"), as_datetime),
+           
+                   across(CountPeriod, ~ fct_reorder(., Date)),
                    )
-        
-        trafficSurveyData <- trafficSurveyData %>%
-            mutate(CountPeriodAsDate = parse_datetime(as.character(CountPeriod), format = "%b-%Y"),
-                   across(CountPeriod, ~ fct_reorder(., CountPeriodAsDate))
-                   ) %>%
-            select(-CountPeriodAsDate)
 
         
         if (breakDownDates) {
-            trafficSurveyData <- trafficSurveyData %>%
+            trafficSurveyData <- trafficSurveyData |>
 
-                mutate(hour = as.ordered(hour(as_datetime(map_chr(str_split(TimePeriod, "\\s*-\\s"), 1), format = "%H:%M"))),
+                mutate(hour = as.ordered(hour(as_datetime(map_chr(str_split(TimePeriod, "\\s*-\\s*"), 1), format = "%H:%M"))),
                        year = as.ordered(year(Date)),
                        month = month(Date, label = TRUE),
                        weekday = wday(Date, label = TRUE),
-                       isWeekEnd = (as.integer(weekday) %in% c(1, 7)), #between(as.integer(weekday), 6, 7)) %>%
-                      ) %>%
+                       isWeekEnd = (as.integer(weekday) %in% c(1, 7)), #between(as.integer(weekday), 6, 7)) |>
+                      ) |>
 
-                # mutate_at(vars(, as.ordered)) %>%
-                relocate(c(hour, year, month, weekday, isWeekEnd), .after = EndDateTime)
+                # mutate_at(vars(, as.ordered)) |>
+                relocate(c(matches("DateTime"), hour, year, month, weekday, isWeekEnd), .after = StartDateTime)
         }
         
 
